@@ -1,0 +1,229 @@
+// Tests for site/js/aggregator.js and models.js, mirroring tests/test_aggregator.py.
+import assert from "node:assert/strict";
+import { test } from "node:test";
+
+import {
+  collectShowtimes,
+  createCache,
+  filterShowtimes,
+  groupByMovie,
+} from "../../site/js/aggregator.js";
+import { addDays, makeShowtime, normalizeTitle, todayMyt } from "../../site/js/models.js";
+
+const show = (chain, cinema, title, hour, region = "Klang Valley") =>
+  makeShowtime({
+    chain,
+    cinema_id: cinema,
+    cinema_name: cinema,
+    region,
+    movie_title: title,
+    start: `2026-10-15T${String(hour).padStart(2, "0")}:00`,
+    business_date: "2026-10-15",
+  });
+
+test("normalizeTitle strips tags, case and punctuation", () => {
+  assert.equal(normalizeTitle("(IMAX) Jailer 2"), "jailer 2");
+  assert.equal(normalizeTitle("[BED] OTHER MOMMY"), "other mommy");
+  assert.equal(normalizeTitle("(InfinityVision) Avengers:Endgame Encore"), "avengers endgame encore");
+});
+
+test("normalizeTitle drops non-Latin words so bilingual titles match", () => {
+  assert.equal(normalizeTitle("Go for Broke 2 重生2"), "go for broke 2");
+  assert.equal(normalizeTitle("Good Trip 我阿爹想旅行"), "good trip");
+  assert.equal(normalizeTitle("Jailer 2 (Tamil)"), "jailer 2");
+});
+
+const threeShows = () => [
+  show("GSC", "Mid Valley", "Jailer 2", 20),
+  show("TGV", "Pavilion KL", "Jailer 2", 21),
+  show("TGV", "Bukit Indah", "Other Mommy", 19, "Southern"),
+];
+
+test("no filters returns all, sorted by start", () => {
+  assert.deepEqual(
+    filterShowtimes(threeShows()).map((s) => s.start.slice(11, 13)),
+    ["19", "20", "21"],
+  );
+});
+
+test("filters by chain, region, cinema and movie", () => {
+  const shows = threeShows();
+  assert.equal(filterShowtimes(shows, { chains: ["gsc"] }).length, 1);
+  assert.equal(filterShowtimes(shows, { region: "southern" }).length, 1);
+  assert.equal(filterShowtimes(shows, { cinema: "pavilion" }).length, 1);
+  assert.equal(filterShowtimes(shows, { movie: "JAILER" }).length, 2);
+});
+
+test("filters by earliest start time", () => {
+  assert.deepEqual(
+    filterShowtimes(threeShows(), { after: "20:30" }).map((s) => s.cinema_name),
+    ["Pavilion KL"],
+  );
+});
+
+test("the start-time filter keeps after-midnight shows", () => {
+  const late = makeShowtime({
+    chain: "GSC",
+    cinema_name: "Queensbay",
+    movie_title: "Go For Broke 2",
+    start: "2026-10-16T00:15",
+    business_date: "2026-10-15",
+  });
+  assert.deepEqual(filterShowtimes([...threeShows(), late], { after: "20:30" }).length, 2);
+});
+
+test("the same movie from both chains is grouped", () => {
+  const groups = groupByMovie([
+    show("GSC", "Mid Valley", "(IMAX) Jailer 2", 20),
+    show("TGV", "Pavilion KL", "Jailer 2", 21),
+  ]);
+  assert.deepEqual([...groups.keys()], ["jailer 2"]);
+  assert.equal(groups.get("jailer 2").length, 2);
+});
+
+test("one chain failing still returns the other", async () => {
+  const good = { chain: "TGV", cinema_id: "PKL", name: "TGV Pavilion", region: "Klang Valley" };
+  const providers = {
+    GSC: {
+      fetchCinemas: async () => {
+        throw new Error("network down");
+      },
+      fetchShowtimes: async () => assert.fail("should not be called"),
+    },
+    TGV: {
+      fetchCinemas: async () => [good],
+      fetchShowtimes: async (cinema) => [show("TGV", cinema.name, "Jailer 2", 20)],
+    },
+  };
+  const errors = [];
+  const result = await collectShowtimes("2026-10-15", { providers, onError: (e) => errors.push(e) });
+  assert.equal(result.showtimes.length, 1);
+  assert.equal(result.showtimes[0].chain, "TGV");
+  assert.equal(result.errors.length, 1);
+  assert.match(result.errors[0], /GSC/);
+  assert.deepEqual(errors, result.errors);
+});
+
+test("one cinema failing still returns the rest, with progress", async () => {
+  const cinemas = ["A", "B", "C"].map((id) => ({ chain: "TGV", cinema_id: id, name: id, region: "Klang Valley" }));
+  const providers = {
+    TGV: {
+      fetchCinemas: async () => cinemas,
+      fetchShowtimes: async (c) => {
+        if (c.cinema_id === "B") throw new Error("timed out");
+        return [show("TGV", c.name, "Jailer 2", 20)];
+      },
+    },
+  };
+  const progress = [];
+  const result = await collectShowtimes("2026-10-15", {
+    providers,
+    onProgress: (p) => progress.push(`${p.done}/${p.total}`),
+  });
+  assert.equal(result.showtimes.length, 2);
+  assert.deepEqual(result.errors, ["TGV B: timed out"]);
+  assert.deepEqual(progress, ["0/3", "1/3", "2/3", "3/3"]);
+});
+
+test("only fetches cinemas matching the region", async () => {
+  const fetched = [];
+  const providers = {
+    TGV: {
+      fetchCinemas: async () => [
+        { chain: "TGV", cinema_id: "A", name: "A", region: "Klang Valley" },
+        { chain: "TGV", cinema_id: "B", name: "B", region: "Southern" },
+      ],
+      fetchShowtimes: async (c) => {
+        fetched.push(c.cinema_id);
+        return [];
+      },
+    },
+  };
+  await collectShowtimes("2026-10-15", { providers, region: "southern" });
+  assert.deepEqual(fetched, ["B"]);
+});
+
+test("never runs more than the concurrency limit at once", async () => {
+  const cinemas = Array.from({ length: 20 }, (_, i) => ({ chain: "TGV", cinema_id: `C${i}`, name: `C${i}`, region: "x" }));
+  let inFlight = 0;
+  let peak = 0;
+  const providers = {
+    TGV: {
+      fetchCinemas: async () => cinemas,
+      fetchShowtimes: async () => {
+        peak = Math.max(peak, ++inFlight);
+        await new Promise((r) => setTimeout(r, 2));
+        inFlight--;
+        return [];
+      },
+    },
+  };
+  await collectShowtimes("2026-10-15", { providers, concurrency: 6 });
+  assert.equal(peak, 6);
+});
+
+class MemoryStorage {
+  constructor() {
+    this.map = new Map();
+  }
+  get length() {
+    return this.map.size;
+  }
+  key(i) {
+    return [...this.map.keys()][i] ?? null;
+  }
+  getItem(k) {
+    return this.map.has(k) ? this.map.get(k) : null;
+  }
+  setItem(k, v) {
+    this.map.set(k, String(v));
+  }
+  removeItem(k) {
+    this.map.delete(k);
+  }
+}
+
+test("cache hits skip the network, and entries expire", async () => {
+  let clock = 0;
+  const cache = createCache(new MemoryStorage(), { ttlMs: 1000, now: () => clock });
+  let calls = 0;
+  const providers = {
+    TGV: {
+      fetchCinemas: async () => [{ chain: "TGV", cinema_id: "A", name: "A", region: "x" }],
+      fetchShowtimes: async (c) => {
+        calls++;
+        return [show("TGV", c.name, "Jailer 2", 20)];
+      },
+    },
+  };
+  await collectShowtimes("2026-10-15", { providers, cache });
+  await collectShowtimes("2026-10-15", { providers, cache });
+  assert.equal(calls, 1);
+  await collectShowtimes("2026-10-16", { providers, cache });
+  assert.equal(calls, 2, "a different date is a different key");
+  clock = 1500;
+  await collectShowtimes("2026-10-15", { providers, cache });
+  assert.equal(calls, 3);
+});
+
+test("a broken storage never breaks loading", async () => {
+  const throwing = new Proxy(
+    {},
+    {
+      get() {
+        throw new Error("SecurityError");
+      },
+    },
+  );
+  const cache = createCache(throwing);
+  cache.set("k", 1);
+  assert.equal(cache.get("k"), undefined);
+  cache.prune();
+});
+
+test("todayMyt uses Malaysia time", () => {
+  // 2026-10-14 17:30 UTC is already 15 Oct 01:30 in Kuala Lumpur.
+  assert.equal(todayMyt(new Date("2026-10-14T17:30:00Z")), "2026-10-15");
+  assert.equal(todayMyt(new Date("2026-10-14T15:59:00Z")), "2026-10-14");
+  assert.equal(addDays("2026-12-30", 3), "2027-01-02");
+});

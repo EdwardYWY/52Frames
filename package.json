@@ -1,0 +1,9 @@
+{
+  "name": "cinema-showtimes-site",
+  "private": true,
+  "type": "module",
+  "description": "Browser-only GSC + TGV showtimes page (site/). No dependencies, no build step.",
+  "scripts": {
+    "test": "node --test \"tests/js/*.test.mjs\""
+  }
+}
