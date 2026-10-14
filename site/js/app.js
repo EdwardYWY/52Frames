@@ -10,6 +10,7 @@ import { enhanceSelect } from "./select.js?v=9";
 import { collectCatalogue } from "./catalog.js?v=9";
 import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=9";
 import { loadSnapshot } from "./snapshot.js?v=9";
+import { enableSeatPreview } from "./seatmap.js?v=9";
 
 const $ = (id) => document.getElementById(id);
 const providers = createProviders();
@@ -825,6 +826,15 @@ function notPublishedText(view) {
 
 // ---------------------------------------------------------------- movie sheet
 
+// TGV showtimes in the schedule -> their show, for the hold-to-see-seats preview (seatmap.js).
+const seatShows = new WeakMap();
+function allowSeatPreview(node, show) {
+  if (show.chain !== "TGV" || !show.cinema_id) return;
+  seatShows.set(node, show);
+  node.classList.add("tgv-hold");
+}
+let seatPreview = null;
+
 function timeChip(show, now) {
   const overnight = show.start.slice(0, 10) > show.business_date;
   const past = show.start < now;
@@ -839,6 +849,7 @@ function timeChip(show, now) {
     show.experience ? el("i", {}, show.experience) : null,
   );
   if (show.booking_url) Object.assign(chip, { href: show.booking_url, target: "_blank", rel: "noopener" });
+  allowSeatPreview(chip, show);
   return chip;
 }
 
@@ -902,6 +913,7 @@ function timeRow(show, now) {
     el("span", { class: "trow-go mono" }, show.sold_out ? "Sold out" : past ? "Started" : show.booking_url ? "Book ↗" : ""),
   );
   if (show.booking_url) Object.assign(row, { href: show.booking_url, target: "_blank", rel: "noopener" });
+  allowSeatPreview(row, show);
   return row;
 }
 
@@ -1035,6 +1047,7 @@ function route() {
     requestAnimationFrame(() => $("sheet").querySelector(".close").focus({ preventScroll: true }));
   }
   if (!key) {
+    seatPreview?.close();
     sheetKey = null;
     document.title = "52 Frames";
     returnFocus?.focus?.({ preventScroll: true });
@@ -1150,6 +1163,11 @@ async function init() {
       render();
     });
   }
+  seatPreview = enableSeatPreview($("m-schedule"), {
+    selector: ".tgv-hold",
+    showFor: (node) => seatShows.get(node),
+    fetchPlan: (show, signal) => providers.TGV.fetchSeatPlan(show, signal),
+  });
   $("sheet").addEventListener("click", (e) => {
     if (e.target.closest("[data-close]")) closeSheet();
   });

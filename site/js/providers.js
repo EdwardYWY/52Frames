@@ -152,6 +152,7 @@ export const TGV = {
   chain: "TGV",
   statesUrl: "https://api.tgv.com.my/api/cinemas/v1/getstatecinema",
   sessionsUrl: "https://api.tgv.com.my/api/boxoffice/v1/moviesession_get",
+  seatPlanUrl: "https://api.tgv.com.my/api/boxoffice/v1/moviesession_getseatplan",
   movieUrl: "https://www.tgv.com.my/movies/details",
   infoUrl: "https://www.tgv.com.my/movie",
 };
@@ -282,6 +283,75 @@ export function parseTgvShowtimes(payload, cinema) {
   return shows;
 }
 
+/**
+ * The TGV session id of a show, from a moviesession_get payload, or "" when it isn't listed.
+ * Shows don't carry ids (the snapshot leaves them out), so they're matched by start and hall.
+ */
+export function findTgvSession(payload, show) {
+  let fallback = "";
+  for (const dayCinema of payload?.results?.businessday?.cinemas || []) {
+    for (const movie of dayCinema.movies || []) {
+      for (const experience of movie.experiences || []) {
+        for (const session of experience.sessions || []) {
+          if (tgvStart(session.showtimemy) !== show.start || (session.screenname || "") !== show.hall) continue;
+          if ((session.experience || "").toUpperCase() === show.experience) return String(session.sessionid);
+          fallback ||= String(session.sessionid);
+        }
+      }
+    }
+  }
+  return fallback;
+}
+
+// TGV's seat statuses (Vista): 0 empty, 1 sold, 2 house, 3 special, 4 reserved, 5 unavailable,
+// 6 placeholder (no seat), 7 companion, 8 wheelchair-friendly.
+const SEAT_STATE = { 0: "free", 1: "sold", 7: "free", 8: "free" };
+
+/**
+ * A TGV seat plan as rows of cells, laid out the way TGV draws it: screen side first, and
+ * mirrored left to right (both reversed from the API's order).
+ * Returns { rows: [{ label, seats: [null | { number, state, pair }] }], free, total }.
+ */
+export function parseTgvSeatPlan(payload) {
+  const areas = payload?.results?.seatlayout?.areas;
+  if (!payload?.success || !Array.isArray(areas)) throw new Error("No seat plan for this show");
+  // Every area (single, twin, beanie...) uses the same row and column grid, so they merge.
+  const grid = new Map(); // rowIndex -> { label, seats: Map(columnIndex -> seat) }
+  let columns = 0;
+  for (const area of areas) {
+    columns = Math.max(columns, area.columnCount || 0);
+    for (const row of area.rows || []) {
+      for (const seat of row.seats || []) {
+        if (!seat?.position || seat.status === 6) continue;
+        const { rowIndex, columnIndex } = seat.position;
+        columns = Math.max(columns, columnIndex + 1);
+        if (!grid.has(rowIndex)) grid.set(rowIndex, { label: "", seats: new Map() });
+        const line = grid.get(rowIndex);
+        line.label ||= row.physicalName || "";
+        line.seats.set(columnIndex, {
+          number: `${row.physicalName || ""}${seat.id ?? ""}`,
+          state: SEAT_STATE[seat.status] || "blocked",
+          pair: (seat.seatsInGroup?.length || 0) > 1,
+        });
+      }
+    }
+  }
+  const used = [...grid.values()].flatMap((line) => [...line.seats.keys()]);
+  const first = Math.min(...used);
+  const last = Math.max(...used);
+  const indexes = [...grid.keys()];
+  const rows = [];
+  // Gaps between rows (aisles) stay as empty rows; nothing is drawn outside the seats.
+  for (let r = Math.max(...indexes); r >= Math.min(...indexes); r--) {
+    const line = grid.get(r);
+    const seats = [];
+    for (let c = last; c >= first; c--) seats.push(line?.seats.get(c) || null);
+    rows.push({ label: line?.label || "", seats });
+  }
+  const all = rows.flatMap((row) => row.seats).filter(Boolean);
+  return { rows, free: all.filter((s) => s.state === "free").length, total: all.length };
+}
+
 // ---------------------------------------------------------------------------- network
 
 export const REQUEST_TIMEOUT_MS = 20000;
@@ -343,6 +413,16 @@ export function createProviders({
           signal,
         );
         return parseTgvShowtimes(await res.json(), cinema);
+      },
+      /** The live seat plan of one show: finds its session, then asks for the plan. */
+      async fetchSeatPlan(show, signal) {
+        const post = (url, body) =>
+          request(fetchImpl, url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }, signal);
+        const sessions = await post(TGV.sessionsUrl, { cinemaid: show.cinema_id, businessdate: show.business_date });
+        const sessionid = findTgvSession(await sessions.json(), show);
+        if (!sessionid) throw new Error("This show is no longer listed");
+        const plan = await post(TGV.seatPlanUrl, { cinemaid: show.cinema_id, sessionid });
+        return parseTgvSeatPlan(await plan.json());
       },
     },
   };

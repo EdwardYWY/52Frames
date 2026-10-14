@@ -78,6 +78,8 @@ build step, no dependencies.
   cinema (several at once, or ★ Starred) and start-time dropdowns stay pinned under the header
   while the schedule scrolls (not on phones); a Top button returns to the top. Each time links to the chain's booking page, where seats are chosen. Sold-out times
   are struck through, started ones dimmed, after-midnight ones marked `+1`.
+  Hidden extra: rest the mouse on a TGV time for 3 seconds (or press and hold it for 3 seconds on a
+  phone) to see that show's live seat map, fetched from TGV on the spot; a normal click or tap still books.
 - **Subtitles** per chain ("Subtitles (GSC)", "Subtitles (TGV)") with a link to each chain's page
   about the movie; they often differ. TGV lists them in its sessions data. GSC only shows them on
   its public movie pages, so the snapshot job reads those (one page per movie per run; titles are
@@ -133,6 +135,7 @@ scripts/
   js/providers.js   GSC + TGV fetch and parse (port of gsc.py / tgv.py); no DOM access
   js/aggregator.js  concurrency limit, sessionStorage cache, filter, group (port of aggregator.py)
   js/app.js         page code: grid, search, movie view, stars, location
+  js/seatmap.js     hold a TGV time for 3 s to see its live seat map
   js/select.js      styled dropdowns over real <select>s (keyboard, screen readers, bottom sheet on phones)
 ```
 
