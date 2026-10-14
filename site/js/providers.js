@@ -4,8 +4,8 @@
 // Nothing here touches the page. Network and XML parsing are injectable so Node tests can
 // run the parsers against tests/fixtures/ without a browser.
 
-import { floatOrNull, intOrNull, makeShowtime, normalizeSubtitles } from "./models.js?v=20";
-import { tgvCinemaName } from "./places.js?v=20";
+import { floatOrNull, intOrNull, makeShowtime, normalizeSubtitles } from "./models.js?v=21";
+import { tgvCinemaName } from "./places.js?v=21";
 
 // ---------------------------------------------------------------------------- GSC
 
@@ -136,8 +136,9 @@ const GSC_CLOSED_TYPES = new Set(["H", "R", "D", "L", "X"]);
 const GSC_PAIR_TYPES = new Set(["T", "TS", "4S"]);
 
 /**
- * GSC's getHallSeatStatus XML as rows of cells, in the same shape as parseTgvSeatPlan:
- * the front row (nearest the screen) first, seat 1 on the left.
+ * GSC's getHallSeatStatus XML as rows of cells, in the same shape as parseTgvSeatPlan, laid out
+ * the way GSC draws it: rows in order of y (y counts from the screen, so the row nearest the
+ * screen comes first, usually the highest letter), seat 1 on the left.
  */
 export function parseGscSeatPlan(xmlText, parseXml = domParseXml) {
   const root = parseXml(xmlText);
@@ -153,6 +154,7 @@ export function parseGscSeatPlan(xmlText, parseXml = domParseXml) {
         number: `${attr(row, "value")}${attr(col, "value")}`,
         state: status === "A" && !GSC_CLOSED_TYPES.has(type) ? "free" : status === "B" ? "sold" : "blocked",
         pair: GSC_PAIR_TYPES.has(type),
+        oku: type === "W", // wheelchair space
       });
     }
   }
@@ -160,7 +162,7 @@ export function parseGscSeatPlan(xmlText, parseXml = domParseXml) {
   if (!xs.length) throw new Error("No seat plan for this show");
   const ys = [...grid.keys()];
   const rows = [];
-  for (let y = Math.max(...ys); y >= Math.min(...ys); y--) {
+  for (let y = Math.min(...ys); y <= Math.max(...ys); y++) {
     const line = grid.get(y);
     const seats = [];
     for (let x = Math.min(...xs); x <= Math.max(...xs); x++) seats.push(line?.seats.get(x) || null);
@@ -391,6 +393,7 @@ export function parseTgvSeatPlan(payload) {
           number: `${row.physicalName || ""}${seat.id ?? ""}`,
           state: SEAT_STATE[seat.status] || "blocked",
           pair: (seat.seatsInGroup?.length || 0) > 1,
+          oku: seat.status === 8, // wheelchair space
         });
       }
     }
