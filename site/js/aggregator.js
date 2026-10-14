@@ -2,7 +2,7 @@
 // Ports cinema_showtimes/aggregator.py, plus a sessionStorage cache for the browser.
 
 export const CONCURRENCY = 6;
-import { movieGroupKey, normalizeLanguage } from './models.js?v=6';
+import { movieGroupKey, normalizeLanguage } from './models.js?v=7';
 export const CACHE_TTL_MS = 10 * 60 * 1000;
 // Bump when the cached shape of a showtime changes.
 const CACHE_PREFIX = "showtimes:v3:";
@@ -73,14 +73,27 @@ export function posterCandidates(shows) {
 
 /** One summary per movie: the data behind a poster card. */
 export function summarizeMovies(showtimes) {
+  const versions = new Map();
+  for (const show of showtimes) {
+    if (!versions.has(show.movie_key)) versions.set(show.movie_key, new Set());
+    const language = normalizeLanguage(show.language);
+    if (language) versions.get(show.movie_key).add(language);
+  }
   return [...groupByMovie(showtimes)].map(([key, shows]) => {
     const withRuntime = shows.find((s) => s.duration_mins) || shows[0];
+    const language = normalizeLanguage(shows.find((s) => s.language)?.language);
+    let title = shows.map((s) => s.movie_title).sort((a, b) => a.length - b.length || cmp(a, b))[0];
+    if (language && versions.get(shows[0].movie_key).size > 1) {
+      const suffix = /\s*\(([^()]*)\)\s*$/.exec(title);
+      if (suffix && normalizeLanguage(suffix[1]).toLowerCase() === language.toLowerCase()) title = title.slice(0, suffix.index).trim();
+      title = `${title} (${language})`;
+    }
     return {
       key,
-      title: shows.map((s) => s.movie_title).sort((a, b) => a.length - b.length || cmp(a, b))[0],
+      title,
       duration_mins: withRuntime.duration_mins,
       rating: shows.find((s) => s.rating)?.rating || "",
-      language: normalizeLanguage(shows.find((s) => s.language)?.language),
+      language,
       chains: [...new Set(shows.map((s) => s.chain))].sort(),
       showCount: shows.length,
       cinemaCount: new Set(shows.map((s) => `${s.chain}|${s.cinema_name}`)).size,

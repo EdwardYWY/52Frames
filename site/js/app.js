@@ -2,14 +2,14 @@
 // manage starred cinemas. Fetching and parsing live in providers.js; grouping and caching in
 // aggregator.js.
 
-import { collectShowtimes, createCache, filterShowtimes, summarizeMovies } from "./aggregator.js?v=6";
-import { REGIONS, movieGroupKey, distanceKm, normalizeTitle, todayMyt } from "./models.js?v=6";
-import { TGV_LOCATIONS } from "./places.js?v=6";
-import { createProviders, domParseXml } from "./providers.js?v=6";
-import { enhanceSelect } from "./select.js?v=6";
-import { collectCatalogue } from "./catalog.js?v=6";
-import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=6";
-import { loadSnapshot } from "./snapshot.js?v=6";
+import { collectShowtimes, createCache, filterShowtimes, summarizeMovies } from "./aggregator.js?v=7";
+import { REGIONS, movieGroupKey, distanceKm, normalizeTitle, todayMyt } from "./models.js?v=7";
+import { TGV_LOCATIONS } from "./places.js?v=7";
+import { createProviders, domParseXml } from "./providers.js?v=7";
+import { enhanceSelect } from "./select.js?v=7";
+import { collectCatalogue } from "./catalog.js?v=7";
+import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=7";
+import { loadSnapshot } from "./snapshot.js?v=7";
 
 const $ = (id) => document.getElementById(id);
 const providers = createProviders();
@@ -656,6 +656,7 @@ function movieCard(summary) {
     cards.set(summary.key, card);
   }
   const img = card.querySelector("img");
+  if (img) img.alt = `${summary.title} poster`;
   if (img) setPoster(img, summary.posters);
   else if (summary.posters.length) {
     const frame = card.querySelector(".poster");
@@ -690,6 +691,8 @@ function renderGrid() {
   const atCinema = matchesCinema($("cinema"));
   const visible = view.shows.filter(s => atCinema(s) && matchesSearch(s, searchText()) && (!$("hide-concerts").checked || !isConcert(s)));
   const movies = browseMovies(visible, { today: todayMyt(), sort: $("sort").value });
+  const titles = new Map(summarizeMovies(view.shows).map(m => [m.key, m.title]));
+  for (const movie of movies) movie.title = titles.get(movie.key) || movie.title;
   for (const m of movies) state.lastSummary.set(m.key, m);
   $("count").textContent = `${plural(movies.length, "movie")} · ${plural(new Set(visible.map(venueKey)).size, "cinema")}`;
   $("grid").replaceChildren(...(movies.length ? movies.map(m => movieCard(m)) : [el("p", { class: "empty" }, view.loading ? "Loading movies and advance sales…" : "No movies match these filters.")]));
@@ -795,6 +798,7 @@ function renderSheet() {
   const view = state.sheet;
   const all = view.shows.filter((s) => movieGroupKey(s) === key);
   const summary = summarizeMovies(all)[0] || state.lastSummary.get(key);
+  if (summary && state.lastSummary.has(key)) summary.title = state.lastSummary.get(key).title;
 
   if (sheetKey !== key) {
     sheetKey = key;
@@ -811,7 +815,7 @@ function renderSheet() {
   }
 
   $("m-title").textContent = summary?.title || (view.loading ? "Loading…" : "Movie not found");
-  document.title = summary ? `${summary.title} · 52 Frames` : "52 Frames · Showtimes";
+  document.title = summary ? `${summary.title} · 52 Frames` : "52 Frames";
   const subtitleRow = ([chain, info]) => {
     const text = info.subtitles == null ? "Not listed" : info.subtitles.length ? info.subtitles.join(", ") : "None listed";
     const value = info.info_url
@@ -915,7 +919,7 @@ function route() {
   }
   if (!key) {
     sheetKey = null;
-    document.title = "52 Frames · Showtimes";
+    document.title = "52 Frames";
     returnFocus?.focus?.({ preventScroll: true });
     returnFocus = null;
   }
@@ -932,6 +936,7 @@ const dropdowns = [];
 
 /** What the folded filter button says on phones: only what differs from the defaults. */
 function renderFilterSummary() {
+  $("clear-search").hidden = !searchText();
   const parts = [regionLabel()];
   if (chosenCinemas($("cinema")).length) parts.push(cinemaSummary($("cinema")));
   if ($("sort").value !== "shows") parts.push($("sort").selectedOptions[0].text);
@@ -991,6 +996,11 @@ async function init() {
   for (const id of ["cinema", "sort"]) $(id).addEventListener("change", render);
   $("hide-concerts").addEventListener("change", () => { savePrefs(); render(); });
   $("q").addEventListener("input", render);
+  $("clear-search").addEventListener("click", () => {
+    $("q").value = "";
+    render();
+    $("q").focus();
+  });
   $("filters-toggle").addEventListener("click", () => toggleFilters());
   $("q").addEventListener("keydown", (e) => {
     if (e.key === "Escape" && $("q").value) {
