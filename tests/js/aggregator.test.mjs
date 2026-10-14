@@ -7,8 +7,10 @@ import {
   createCache,
   filterShowtimes,
   groupByMovie,
+  posterCandidates,
+  summarizeMovies,
 } from "../../site/js/aggregator.js";
-import { addDays, makeShowtime, normalizeTitle, todayMyt } from "../../site/js/models.js";
+import { addDays, distanceKm, makeShowtime, normalizeTitle, todayMyt } from "../../site/js/models.js";
 
 const show = (chain, cinema, title, hour, region = "Klang Valley") =>
   makeShowtime({
@@ -226,4 +228,53 @@ test("todayMyt uses Malaysia time", () => {
   assert.equal(todayMyt(new Date("2026-10-14T17:30:00Z")), "2026-10-15");
   assert.equal(todayMyt(new Date("2026-10-14T15:59:00Z")), "2026-10-14");
   assert.equal(addDays("2026-12-30", 3), "2027-01-02");
+});
+
+test("posters: both chains' posters are offered, highest resolution first", () => {
+  const gsc = { ...show("GSC", "Mid Valley", "(IMAX) Jailer 2", 20), poster_url: "g-big", poster_small_url: "g-med" };
+  const tgv = { ...show("TGV", "Pavilion KL", "Jailer 2", 21), poster_url: "t-poster" };
+  const again = { ...show("GSC", "Sunway", "Jailer 2", 22), poster_url: "g-big", poster_small_url: "g-med" };
+  assert.deepEqual(posterCandidates([tgv, gsc, again]), [
+    { url: "g-big", width: 500 },
+    { url: "t-poster", width: 436 },
+    { url: "g-med", width: 232 },
+  ]);
+  assert.deepEqual(posterCandidates([show("TGV", "x", "No Poster", 20)]), []);
+});
+
+test("summarizeMovies merges chains into one card per movie", () => {
+  const [jailer, mommy] = summarizeMovies([
+    { ...show("GSC", "Mid Valley", "(IMAX) Jailer 2", 20), duration_mins: 170, rating: "16" },
+    show("TGV", "Pavilion KL", "Jailer 2", 18),
+    show("TGV", "Pavilion KL", "Jailer 2", 22),
+    show("TGV", "Bukit Indah", "Other Mommy", 19),
+  ]);
+  assert.equal(jailer.key, "jailer 2");
+  assert.equal(jailer.title, "Jailer 2");
+  assert.deepEqual(jailer.chains, ["GSC", "TGV"]);
+  assert.equal(jailer.showCount, 3);
+  assert.equal(jailer.cinemaCount, 2);
+  assert.equal(jailer.duration_mins, 170);
+  assert.equal(jailer.rating, "16");
+  assert.equal(jailer.firstStart, "2026-10-15T18:00");
+  assert.equal(mommy.title, "Other Mommy");
+});
+
+test("distanceKm: Pavilion KL to Sunway Pyramid is about 14 km", () => {
+  const pavilion = { latitude: 3.1489607, longitude: 101.7134125 };
+  const sunway = { latitude: 3.0726, longitude: 101.6067 };
+  const km = distanceKm(pavilion, sunway);
+  assert.ok(km > 14 && km < 15, String(km));
+  assert.equal(distanceKm(pavilion, { latitude: null, longitude: 101 }), null);
+  assert.equal(distanceKm(pavilion, pavilion), 0);
+});
+
+test("every TGV location is inside Malaysia and not a copy of another", async () => {
+  const { TGV_LOCATIONS } = await import("../../site/js/places.js");
+  const points = Object.values(TGV_LOCATIONS);
+  assert.ok(points.length >= 45);
+  for (const [lat, lng] of points) {
+    assert.ok(lat > 0.8 && lat < 7.5 && lng > 99.5 && lng < 119.5, `${lat},${lng}`);
+  }
+  assert.equal(new Set(points.map(String)).size, points.length);
 });

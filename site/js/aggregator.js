@@ -3,7 +3,8 @@
 
 export const CONCURRENCY = 6;
 export const CACHE_TTL_MS = 10 * 60 * 1000;
-const CACHE_PREFIX = "showtimes:v1:";
+// Bump when the cached shape of a showtime changes.
+const CACHE_PREFIX = "showtimes:v3:";
 
 const matches = (value, needle) => !needle || String(value).toLowerCase().includes(needle.toLowerCase());
 
@@ -50,6 +51,42 @@ export function groupByMovie(showtimes) {
     groups.get(show.movie_key).push(show);
   }
   return groups;
+}
+
+// Known poster widths: GSC thumb_big is 500x750, thumb_medium 232x350; TGV "poster" is 436x650.
+// Used as srcset hints; the browser picks the smallest that is sharp enough, and when both chains
+// have a poster the higher-resolution one is first.
+const POSTER_WIDTHS = { GSC: [500, 232], TGV: [436, 0] };
+
+/** Poster candidates for one movie, highest resolution first: [{url, width}]. */
+export function posterCandidates(shows) {
+  const seen = new Map();
+  for (const s of shows) {
+    const [big, small] = POSTER_WIDTHS[s.chain] || [300, 150];
+    if (s.poster_url && !seen.has(s.poster_url)) seen.set(s.poster_url, big || 300);
+    if (s.poster_small_url && !seen.has(s.poster_small_url)) seen.set(s.poster_small_url, small || 150);
+  }
+  return [...seen].map(([url, width]) => ({ url, width })).sort((a, b) => b.width - a.width);
+}
+
+/** One summary per movie: the data behind a poster card. */
+export function summarizeMovies(showtimes) {
+  return [...groupByMovie(showtimes)].map(([key, shows]) => {
+    const withRuntime = shows.find((s) => s.duration_mins) || shows[0];
+    return {
+      key,
+      title: shows.map((s) => s.movie_title).sort((a, b) => a.length - b.length || cmp(a, b))[0],
+      duration_mins: withRuntime.duration_mins,
+      rating: shows.find((s) => s.rating)?.rating || "",
+      language: shows.find((s) => s.language)?.language || "",
+      chains: [...new Set(shows.map((s) => s.chain))].sort(),
+      showCount: shows.length,
+      cinemaCount: new Set(shows.map((s) => `${s.chain}|${s.cinema_name}`)).size,
+      firstStart: shows[0].start,
+      posters: posterCandidates(shows),
+      shows,
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------- cache

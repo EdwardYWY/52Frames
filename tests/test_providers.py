@@ -33,6 +33,7 @@ class GscCinemaParsingTest(unittest.TestCase):
         self.assertEqual(queensbay.hall_group, "")
         self.assertEqual(aurum.region, "Klang Valley")
         self.assertEqual(aurum.hall_group, "AURUMTRX")
+        self.assertEqual((queensbay.latitude, queensbay.longitude), (5.33306, 100.30667))
 
 
 class GscShowtimeParsingTest(unittest.TestCase):
@@ -58,6 +59,14 @@ class GscShowtimeParsingTest(unittest.TestCase):
         self.assertEqual(first.language, "MAN")
         self.assertFalse(first.sold_out)
         self.assertIn("showtime-by-movies/6495", first.booking_url)
+        self.assertEqual((first.latitude, first.longitude), (5.33306, 100.30667))
+
+    def test_posters_come_from_the_child_film(self):
+        first = self.shows[0]
+        self.assertEqual(first.poster_url, "https://poster.gsc.com.my/2026/261012_GoForBroke2_big.jpg")
+        self.assertEqual(
+            first.poster_small_url, "https://poster.gsc.com.my/2026/261012_GoForBroke2_med.jpg"
+        )
 
     def test_after_midnight_show_keeps_business_date(self):
         late = [s for s in self.shows if s.start.day == 16]
@@ -112,6 +121,17 @@ class TgvShowtimeParsingTest(unittest.TestCase):
         self.assertEqual(indulge.rating, "16")
         self.assertEqual(indulge.language, "English")
         self.assertEqual(indulge.booking_url, "https://www.tgv.com.my/movies/details/other-mommy")
+
+    def test_location_comes_from_the_map_link(self):
+        self.assertAlmostEqual(self.shows[0].latitude, 3.1489607, places=6)
+        self.assertAlmostEqual(self.shows[0].longitude, 101.7134125, places=6)
+
+    def test_poster_asset_is_used_and_missing_ones_are_blank(self):
+        mommy = [s for s in self.shows if s.movie_title == "Other Mommy"][0]
+        self.assertTrue(mommy.poster_url.endswith("d1d22010-1a21-4f66-b272-39d8727fed90.jpg"))
+        self.assertEqual(mommy.poster_small_url, "")
+        digger = [s for s in self.shows if s.movie_title == "Digger"][0]
+        self.assertEqual(digger.poster_url, "")
 
     def test_blank_runtime_becomes_none(self):
         digger = [s for s in self.shows if s.movie_title == "Digger"][0]

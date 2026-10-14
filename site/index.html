@@ -11,82 +11,129 @@
 <script type="module" src="js/app.js"></script>
 </head>
 <body>
-<div class="page">
 
-  <header class="mast">
-    <div class="mast-bar">
-      <span class="mark" aria-hidden="true">52F</span>
-      <span class="mono">Cinema schedule · Malaysia</span>
-      <span class="mono mast-clock" id="clock" aria-label="Time in Malaysia"></span>
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="#/"><span class="mark">52F</span><span class="brand-name">Showtimes</span></a>
+    <span class="mono topbar-meta">GSC + TGV · Malaysia</span>
+    <span class="mono clock" id="clock" aria-label="Time in Malaysia"></span>
+    <div class="topbar-tools">
+      <button type="button" class="tool" id="locate" aria-pressed="false" title="Show distance from where you are">
+        <span class="tool-icon" aria-hidden="true">◎</span><span class="tool-text" id="locate-text">Location</span>
+      </button>
+      <button type="button" class="tool" id="open-stars" title="Manage starred cinemas">
+        <span class="tool-icon" aria-hidden="true">★</span><span class="tool-text">Starred</span><span class="tool-badge mono" id="star-count"></span>
+      </button>
     </div>
-    <div class="mast-main">
-      <h1>Showtimes</h1>
-      <p class="lede">GSC and TGV, every hall in the region, on one sheet.<br>
-        Pick a day. Tap a time to book.</p>
-    </div>
-    <div class="mast-foot" aria-hidden="true">
-      <span class="hazard"></span>
-      <span class="mono" id="mast-date"></span>
-    </div>
-  </header>
+  </div>
+</header>
 
-  <form id="controls" class="panel" autocomplete="off">
-    <div class="sec-head"><span class="sec-no">01</span><h2>Schedule</h2><span class="sec-rule"></span></div>
+<main class="page" id="list">
+  <section class="intro">
+    <div class="intro-row">
+      <h1>Now showing</h1>
+      <span class="mono intro-count" id="count"></span>
+    </div>
+    <div class="intro-rule" aria-hidden="true"><span class="hazard"></span><span class="mono" id="intro-date"></span></div>
+  </section>
 
-    <fieldset class="dates">
-      <legend class="label">Date</legend>
-      <div class="date-strip" id="dates"></div>
+  <form class="toolbar" id="toolbar" autocomplete="off">
+    <label class="field"><span class="label">Date</span><span class="select"><select id="date"></select></span></label>
+    <label class="field"><span class="label">Region</span>
+      <span class="select"><select id="region">
+        <option>Klang Valley</option><option>Northern</option><option>Southern</option>
+        <option>East Coast</option><option>East Malaysia</option><option value="">All Malaysia</option>
+      </select></span>
+    </label>
+    <label class="field field-wide"><span class="label">Cinema</span><span class="select"><select id="cinema"></select></span></label>
+    <label class="field"><span class="label">Sort</span>
+      <span class="select"><select id="sort">
+        <option value="shows">Most shows</option><option value="title">Title A–Z</option><option value="time">Earliest show</option>
+      </select></span>
+    </label>
+    <fieldset class="field chains">
+      <legend class="label">Chain</legend>
+      <div class="toggles">
+        <label class="toggle gsc"><input type="checkbox" name="chain" value="GSC" checked><span>GSC</span></label>
+        <label class="toggle tgv"><input type="checkbox" name="chain" value="TGV" checked><span>TGV</span></label>
+      </div>
     </fieldset>
-
-    <div class="row">
-      <label class="field field-region">
-        <span class="label">Region</span>
-        <span class="select">
-          <select id="region">
-            <option>Klang Valley</option><option>Northern</option><option>Southern</option>
-            <option>East Coast</option><option>East Malaysia</option><option value="">All Malaysia</option>
-          </select>
-        </span>
-      </label>
-      <fieldset class="field chains">
-        <legend class="label">Chain</legend>
-        <div class="toggles">
-          <label class="toggle gsc"><input type="checkbox" name="chain" value="GSC" checked><span>GSC</span></label>
-          <label class="toggle tgv"><input type="checkbox" name="chain" value="TGV" checked><span>TGV</span></label>
-        </div>
-      </fieldset>
-      <button type="submit" class="go">Load<span class="wide"> showtimes</span></button>
-    </div>
-
-    <div class="sec-head sub"><span class="sec-no">02</span><h2>Filter</h2><span class="sec-rule"></span></div>
-    <div class="row filters">
-      <label class="field"><span class="label">Movie</span><input type="search" id="movie" placeholder="e.g. jailer"></label>
-      <label class="field"><span class="label">Cinema</span><input type="search" id="cinema" placeholder="e.g. pavilion"></label>
-      <label class="field field-time"><span class="label">From</span><input type="time" id="after"></label>
-    </div>
   </form>
 
-  <section class="results" aria-labelledby="results-title">
-    <div class="sec-head"><span class="sec-no">03</span><h2 id="results-title">Now showing</h2><span class="sec-rule"></span>
-      <span class="mono summary" id="summary"></span></div>
-    <div class="status" id="status" role="status" aria-live="polite">
-      <div class="progress" id="progress" hidden>
-        <div class="bar"><span id="bar"></span></div>
-        <span class="mono" id="progress-text"></span>
-      </div>
-      <div id="warnings"></div>
-    </div>
-    <div id="films"></div>
-  </section>
+  <div class="status" role="status" aria-live="polite">
+    <div class="progress" id="progress" hidden><div class="bar"><span id="bar"></span></div><span class="mono" id="progress-text"></span></div>
+    <div id="warnings"></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
 
   <footer class="foot">
     <span class="hazard thin" aria-hidden="true"></span>
-    <p>Times are Malaysia time. Shows after midnight are listed under the day they belong to, marked <b class="mono">+1</b>.
-      Struck-through times are sold out.</p>
-    <p>Data comes straight from the GSC and TGV websites' own public endpoints, called from your browser.
-      Unofficial and unaffiliated; if a chain changes its site, this page may stop showing it.</p>
+    <p>Times are Malaysia time. Tap a time to book on the chain's own site; seats are chosen there.
+      ☆ a cinema to keep it at the top; stars and your location stay in this browser only.
+      Struck-through times are sold out; <b class="mono">+1</b> marks shows after midnight.</p>
+    <p>Data comes straight from GSC and TGV's public website endpoints, called from your browser.
+      Unofficial and unaffiliated.</p>
   </footer>
+</main>
 
+<div class="sheet stars-sheet" id="stars" hidden>
+  <div class="sheet-backdrop" data-close-stars></div>
+  <section class="sheet-panel stars-panel" role="dialog" aria-modal="true" aria-labelledby="stars-title">
+    <button class="close" type="button" data-close-stars aria-label="Close starred cinemas"><span aria-hidden="true">×</span><span class="close-text">Done</span></button>
+    <div class="stars-main">
+      <h2 id="stars-title">Starred cinemas</h2>
+      <p class="stars-note">Starred cinemas are listed first in every movie, and the cinema menus can show them alone.
+        Saved in this browser only (local storage); nothing is sent anywhere.</p>
+      <div class="sec-head"><span class="sec-no">01</span><h3>Starred</h3><span class="sec-rule"></span>
+        <button type="button" class="link-btn mono" id="stars-clear">Clear all</button></div>
+      <div id="stars-mine"></div>
+      <div class="sec-head"><span class="sec-no">02</span><h3>Add from</h3><span class="sec-rule"></span></div>
+      <div class="m-controls">
+        <label class="field"><span class="label">Region</span><span class="select"><select id="stars-region"></select></span></label>
+        <label class="field"><span class="label">Chain</span><span class="select"><select id="stars-chain">
+          <option value="">Both chains</option><option>GSC</option><option>TGV</option></select></span></label>
+      </div>
+      <div id="stars-all"></div>
+    </div>
+  </section>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-backdrop" data-close></div>
+  <article class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="m-title">
+    <button class="close" type="button" data-close aria-label="Back to all movies">
+      <span aria-hidden="true">←</span><span class="close-text">All movies</span>
+    </button>
+    <aside class="m-side">
+      <div class="m-poster" id="m-poster"></div>
+      <dl class="m-facts" id="m-facts"></dl>
+    </aside>
+    <div class="m-main">
+      <h2 id="m-title"></h2>
+
+      <div class="sec-head"><span class="sec-no">01</span><h3>Date</h3><span class="sec-rule"></span></div>
+      <div class="date-strip" id="m-dates" role="radiogroup" aria-label="Date"></div>
+
+      <div class="sec-head"><span class="sec-no">02</span><h3>Schedule</h3><span class="sec-rule"></span>
+        <span class="mono" id="m-count"></span></div>
+      <div class="m-controls">
+        <div class="seg" role="radiogroup" aria-label="Group by">
+          <label><input type="radio" name="group" value="cinema" checked><span>By cinema</span></label>
+          <label><input type="radio" name="group" value="time"><span>By time</span></label>
+        </div>
+        <label class="field"><span class="label">Cinema</span><span class="select"><select id="m-cinema"></select></span></label>
+        <label class="field"><span class="label">From</span><span class="select"><select id="m-after"></select></span></label>
+        <label class="field" id="m-sort-field"><span class="label">Sort cinemas</span>
+          <span class="select"><select id="m-sort">
+            <option value="time">Earliest show</option><option value="near">Nearest</option><option value="name">Name A–Z</option><option value="shows">Most shows</option>
+          </select></span>
+        </label>
+      </div>
+      <div class="m-status" id="m-status"></div>
+      <div id="m-schedule"></div>
+    </div>
+  </article>
 </div>
 </body>
 </html>

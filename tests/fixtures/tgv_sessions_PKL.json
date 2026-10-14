@@ -14,7 +14,8 @@
        "id": "PKL",
        "keyword": "pavilion-kl",
        "location": "klangvalley",
-       "address": "Lot C5.02.01 & C6.01.00 Level 5 & Level 6 Pavilion Kuala Lumpur 168, Jalan Bukit Bintang  55100 Kuala Lumpur."
+       "address": "Lot C5.02.01 & C6.01.00 Level 5 & Level 6 Pavilion Kuala Lumpur 168, Jalan Bukit Bintang  55100 Kuala Lumpur.",
+       "mapurl": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3983.7940698777743!2d101.71341249999999!3d3.1489606999999995!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31cc370071664501%3A0x49e069f6f51a1ec9!2sTGV%20Cinemas%20Pavilion%20Kuala%20Lumpur!5e0!3m2!1sen!2smy!4v1781583677154!5m2!1sen!2smy"
       }
      },
      "movies": [
@@ -295,7 +296,28 @@
   },
   "movies": [
    {
-    "assets": [],
+    "assets": [
+     {
+      "assetkey": "thumbnail",
+      "folderkey": "other-mommy",
+      "extdata": {
+       "fileinfo": {
+        "contenttype": "image/jpeg",
+        "fileurl": "https://d9s3e2ooa0od7.cloudfront.net/assets/other-mommy/e3c53890-c177-4d84-be09-f78886440765/e3c53890-c177-4d84-be09-f78886440765.jpg"
+       }
+      }
+     },
+     {
+      "assetkey": "poster",
+      "folderkey": "other-mommy",
+      "extdata": {
+       "fileinfo": {
+        "contenttype": "image/jpeg",
+        "fileurl": "https://d9s3e2ooa0od7.cloudfront.net/assets/other-mommy/d1d22010-1a21-4f66-b272-39d8727fed90/d1d22010-1a21-4f66-b272-39d8727fed90.jpg"
+       }
+      }
+     }
+    ],
     "recid": "6ebb1802-f068-41c8-a42c-e4e38ba7e63f",
     "itemkey": "other-mommy",
     "name": "Other Mommy",

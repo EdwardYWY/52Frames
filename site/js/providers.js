@@ -4,7 +4,7 @@
 // Nothing here touches the page. Network and XML parsing are injectable so Node tests can
 // run the parsers against tests/fixtures/ without a browser.
 
-import { intOrNull, makeShowtime } from "./models.js";
+import { floatOrNull, intOrNull, makeShowtime } from "./models.js";
 
 // ---------------------------------------------------------------------------- GSC
 
@@ -28,6 +28,8 @@ export function parseGscCinemas(payload) {
       state: "",
       // Premium venues (Aurum, Velvet, ...) list nothing unless their hall group is sent.
       hall_group: loc.HallGroup || "",
+      latitude: floatOrNull(loc.Latitude),
+      longitude: floatOrNull(loc.Longitude),
     }));
 }
 
@@ -94,6 +96,10 @@ export function parseGscShowtimes(xmlText, cinema, parseXml = domParseXml) {
               language: attr(child, "lang"),
               sold_out: attr(show, "hallfull") === "1",
               booking_url: bookingUrl,
+              poster_url: attr(child, "thumb_big"),
+              poster_small_url: attr(child, "thumb_medium"),
+              latitude: cinema.latitude ?? null,
+              longitude: cinema.longitude ?? null,
             }),
           );
         }
@@ -164,6 +170,8 @@ export function parseTgvCinemas(payload) {
         region,
         state: state.label ?? "",
         hall_group: "",
+        latitude: null,
+        longitude: null,
       });
     }
   }
@@ -176,17 +184,32 @@ function tgvStart(value) {
   return `${match[1]}T${match[2]}`;
 }
 
+function tgvPosterUrl(info) {
+  const poster = (info.assets || []).find((asset) => asset?.assetkey === "poster");
+  return poster?.extdata?.fileinfo?.fileurl || "";
+}
+
+// Google Maps embed links carry the point as "!2d<longitude>!3d<latitude>".
+const MAP_POINT_RE = /!2d(-?\d+(?:\.\d+)?)!3d(-?\d+(?:\.\d+)?)/;
+
+function tgvMapPoint(dayCinema) {
+  const match = MAP_POINT_RE.exec(dayCinema.extdata?.cinema?.mapurl || "");
+  return match ? [floatOrNull(match[2]), floatOrNull(match[1])] : [null, null];
+}
+
 export function parseTgvShowtimes(payload, cinema) {
   if (!payload?.success) return [];
   const results = payload.results || {};
   const movies = new Map((results.movies || []).map((m) => [m.recid, m]));
   const shows = [];
   for (const dayCinema of results.businessday?.cinemas || []) {
+    const [latitude, longitude] = tgvMapPoint(dayCinema);
     for (const movie of dayCinema.movies || []) {
       const info = movies.get(movie.movieid) || {};
       const movieinfo = info.extdata?.movieinfo || {};
       const title = info.name || "Unknown movie";
       const bookingUrl = info.itemkey ? `${TGV.movieUrl}/${info.itemkey}` : "";
+      const posterUrl = tgvPosterUrl(info);
       for (const experience of movie.experiences || []) {
         for (const session of experience.sessions || []) {
           shows.push(
@@ -204,6 +227,9 @@ export function parseTgvShowtimes(payload, cinema) {
               rating: String(movieinfo.rating || ""),
               language: movieinfo.lang || "",
               booking_url: bookingUrl,
+              poster_url: posterUrl,
+              latitude,
+              longitude,
             }),
           );
         }
