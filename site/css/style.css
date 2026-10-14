@@ -18,8 +18,8 @@
   --band-muted: #a3a4a8;
   --accent: #ffd200;
   --on-accent: #16171a;
-  --gsc: #c8102e;
-  --tgv: #1f4fd1;
+  --gsc: #d4a017;
+  --tgv: #c8102e;
   --warn: #9a5b00;
   --warn-bg: #fff3c4;
   --scrim: rgb(12 13 15 / 0.62);
@@ -50,8 +50,8 @@
     --band: #e9e8e3;
     --band-ink: #121316;
     --band-muted: #55565b;
-    --gsc: #ff4f62;
-    --tgv: #5f8dff;
+    --gsc: #e5b52b;
+    --tgv: #d62839;
     --warn: #ffcf5a;
     --warn-bg: #2a2310;
     --scrim: rgb(0 0 0 / 0.72);
@@ -325,7 +325,7 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
   font: 700 10.5px/1 var(--f-mono); letter-spacing: 0.06em; color: #fff; padding: 3px 7px 3px 5px;
   clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 0 100%);
 }
-.chain.GSC { background: var(--gsc); }
+.chain.GSC { background: var(--gsc); color: #16171a; }
 .chain.TGV { background: var(--tgv); }
 
 /* -------------------------------------------------------------- movie sheet */
