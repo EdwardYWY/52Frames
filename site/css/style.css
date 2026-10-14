@@ -152,7 +152,7 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 select {
   width: 100%; height: 40px; margin: 0; padding: 0 34px 0 12px;
   font: 15px var(--f-body); color: var(--ink); background: var(--bg); cursor: pointer;
-  border: 1px solid var(--line); border-bottom: 2px solid var(--ink-2); border-radius: 0;
+  border: 1px solid var(--line); border-radius: 0;
   -webkit-appearance: none; appearance: none; text-overflow: ellipsis;
 }
 select:hover { border-color: var(--ink-2); }
@@ -221,7 +221,7 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
 .cselect-button {
   display: flex; align-items: center; width: 100%; height: 40px; margin: 0; padding: 0 34px 0 12px;
   font: 15px var(--f-body); color: var(--ink); background: var(--bg); text-align: left; cursor: pointer;
-  border: 1px solid var(--line); border-bottom: 2px solid var(--ink-2); border-radius: 0;
+  border: 1px solid var(--line); border-radius: 0;
 }
 .cselect-button:hover { border-color: var(--ink-2); }
 .cselect.open .cselect-button { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--surface-2); }
@@ -279,8 +279,8 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
 
 .card { position: relative; display: block; color: var(--ink); text-decoration: none; min-width: 0; }
 .poster {
+  /* Posters are plain rectangles: no border, never rounded. */
   position: relative; aspect-ratio: 2 / 3; overflow: hidden; background: var(--band);
-  border: 1px solid var(--line);
 }
 .m-poster { position: relative; }
 .poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -296,8 +296,7 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
 }
 .poster.no-img img { display: none; }
 
-.card:hover .poster,
-.card:focus-visible .poster { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 0; }
+.card:focus-visible .poster { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* A search hit showing later this week: greyed, labelled with its next day. */
 .card.later .poster img { filter: grayscale(1) opacity(0.55); }
 .card.later h3, .card.later .card-meta { color: var(--muted); }
@@ -385,7 +384,8 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
 .day b { font: var(--w-display) 22px/1 var(--f-display); font-variant-numeric: tabular-nums; }
 .day:hover span { border-color: var(--ink-2); }
 .day input:checked + span { background: var(--band); color: var(--band-ink); border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
-.day input:checked + span small { color: var(--accent); }
+/* --band-accent: yellow on the dark band (light theme), dark on the light band (dark theme). */
+.day input:checked + span small { color: var(--band-accent); }
 /* A day whose schedule isn't published yet (cinemas publish on Wednesdays). */
 .day.nodata span { border-style: dashed; background: transparent; }
 .day.nodata b { color: var(--muted); }
@@ -549,7 +549,7 @@ a.trow:hover .trow-what, a.trow:hover .trow-go { color: var(--accent); }
   .filters-toggle {
     display: flex; align-items: center; gap: 10px; flex: 1 1 100%; height: 44px; padding: 0 12px; margin: 0;
     font: 15px var(--f-body); color: var(--ink); text-align: left; cursor: pointer;
-    background: var(--bg); border: 1px solid var(--line); border-bottom: 2px solid var(--ink-2); border-radius: 0;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 0;
   }
   .filters-toggle[aria-expanded="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
   .filters-title { font: var(--w-display) 14px/1 var(--f-display); letter-spacing: 0.1em; text-transform: uppercase; flex: none; }
@@ -670,7 +670,7 @@ a.trow:hover .overnight { color: var(--accent); }
 /* -------------------------------------------------------------- corner rounding
    Square by default. --r-panel rounds panels and popups, --r-control buttons, dates and fields. */
 :root { --r-panel: 0px; --r-control: 0px; }
-.toolbar, .sheet-panel, .cselect-list, .seatmap, .venue, .warn, .poster { border-radius: var(--r-panel); }
+.toolbar, .sheet-panel, .cselect-list, .seatmap, .venue, .warn { border-radius: var(--r-panel); }
 .tool, select, .search-box input, .search-clear, .cselect-button, .close, .to-top, .seatmap-close, .filters-toggle,
 .toggle span, .day span, .time, .overnight { border-radius: var(--r-control); }
 .seg label:first-child span { border-radius: var(--r-control) 0 0 var(--r-control); }
