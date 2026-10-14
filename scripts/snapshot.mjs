@@ -11,9 +11,9 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
-import { collectShowtimes, createCache } from "../site/js/aggregator.js";
+import { collectShowtimes, createCache, mapLimit } from "../site/js/aggregator.js";
 import { addDays, todayMyt } from "../site/js/models.js";
-import { createProviders } from "../site/js/providers.js";
+import { GSC, createProviders, findGscSlug, gscMovieSlugs, parseGscSubtitles } from "../site/js/providers.js";
 import { SNAPSHOT_MAX_AGE_MS, decodeSnapshot, encodeSnapshot } from "../site/js/snapshot.js";
 import { parseXml } from "./xml.mjs";
 
@@ -51,6 +51,46 @@ async function reuse(url) {
   }
 }
 
+/**
+ * GSC subtitles and movie page links: GSC's showtime data has neither, so read its public movie
+ * pages, once per movie per run. A movie GSC doesn't link, or a page that fails, keeps
+ * subtitles = null ("not known") rather than failing the snapshot.
+ */
+async function addGscMovieInfo(days) {
+  const shows = days.flatMap((d) => d.showtimes).filter((s) => s.chain === "GSC");
+  const titles = [...new Set(shows.map((s) => s.movie_title))];
+  if (!titles.length) return;
+  let slugs = [];
+  try {
+    const res = await politeFetch(`${GSC.siteUrl}/`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    slugs = gscMovieSlugs(await res.text());
+  } catch (err) {
+    console.log(`GSC homepage: ${err.message}; no GSC subtitles this run`);
+    return;
+  }
+  const slugOf = new Map(titles.map((t) => [t, findGscSlug(t, slugs)]));
+  const info = new Map(); // slug -> subtitles
+  const wanted = [...new Set([...slugOf.values()].filter(Boolean))];
+  await mapLimit(wanted, 2, async (slug) => {
+    try {
+      const res = await politeFetch(`${GSC.siteUrl}/movie/${slug}/`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      info.set(slug, parseGscSubtitles(await res.text()));
+    } catch (err) {
+      console.log(`  ! GSC movie page ${slug}: ${err.message}`);
+    }
+  });
+  for (const s of shows) {
+    const slug = slugOf.get(s.movie_title);
+    if (!slug) continue;
+    s.info_url = `${GSC.siteUrl}/movie/${slug}/`;
+    if (info.has(slug)) s.subtitles = info.get(slug);
+  }
+  const unmatched = titles.filter((t) => !slugOf.get(t));
+  console.log(`GSC movie pages: ${wanted.length} read for ${titles.length} titles` + (unmatched.length ? `; no page for: ${unmatched.join(", ")}` : ""));
+}
+
 async function build() {
   const providers = createProviders({ fetch: politeFetch, parseXml });
   const cache = createCache(null); // memory only: the cinema lists are fetched once per run
@@ -67,6 +107,7 @@ async function build() {
     for (const e of result.errors) console.log(`  ! ${e}`);
     days.push({ date, ...result });
   }
+  await addGscMovieInfo(days);
   const total = days.reduce((n, d) => n + d.showtimes.length, 0);
   // Every cinema failing (e.g. an API change) must not replace a good snapshot with an empty one.
   if (!total && days.every((d) => d.errors.length)) throw new Error("no showtimes at all, every day had errors");

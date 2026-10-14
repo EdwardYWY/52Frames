@@ -778,15 +778,23 @@ function renderSheet() {
 
   $("m-title").textContent = summary?.title || (state.loading ? "Loading…" : "Movie not found");
   document.title = summary ? `${summary.title} · 52 Frames` : "52 Frames · Showtimes";
+  const subtitleRow = ([chain, info]) => {
+    const text = info.subtitles == null ? "Not listed" : info.subtitles.length ? info.subtitles.join(", ") : "None listed";
+    const value = info.info_url
+      ? el("a", { href: info.info_url, target: "_blank", rel: "noopener", title: `${chain}'s page for this movie` }, text, el("span", { class: "ext", "aria-hidden": "true" }, " ↗"))
+      : text;
+    return [`Subtitles (${chain})`, value, info.subtitles?.length ? "" : "muted"];
+  };
   const facts = summary
     ? [
         ["Runtime", runtime(summary.duration_mins)],
         ["Rating", summary.rating],
         ["Language", summary.language],
+        ...Object.entries(summary.byChain || {}).map(subtitleRow),
         ["Region", regionLabel()],
       ].filter(([, v]) => v)
     : [];
-  $("m-facts").replaceChildren(...facts.flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v)]));
+  $("m-facts").replaceChildren(...facts.flatMap(([k, v, cls]) => [el("dt", {}, k), el("dd", { class: cls || null }, v)]));
   renderDateStrip($("m-dates"), "m-date");
 
   const keys = [...new Set(all.map(venueKey))];

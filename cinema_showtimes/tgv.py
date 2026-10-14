@@ -9,13 +9,14 @@ import re
 from datetime import date, datetime
 
 from . import http
-from .models import Cinema, Showtime, float_or_none
+from .models import Cinema, Showtime, float_or_none, normalize_subtitles
 
 CHAIN = "TGV"
 API_BASE = "https://api.tgv.com.my/api"
 STATES_URL = f"{API_BASE}/cinemas/v1/getstatecinema"
 SESSIONS_URL = f"{API_BASE}/boxoffice/v1/moviesession_get"
 MOVIE_URL = "https://www.tgv.com.my/movies/details"
+INFO_URL = "https://www.tgv.com.my/movie"
 
 # TGV groups cinemas by state; map them onto the shared regions GSC uses.
 STATE_TO_REGION = {
@@ -115,6 +116,10 @@ def parse_showtimes(payload: dict, cinema: Cinema) -> list[Showtime]:
             title = info.get("name") or "Unknown movie"
             booking_url = f"{MOVIE_URL}/{info['itemkey']}" if info.get("itemkey") else ""
             poster_url = _poster_url(info)
+            info_url = f"{INFO_URL}/{info['itemkey']}" if info.get("itemkey") else ""
+            subtitles = (
+                normalize_subtitles(movieinfo["subtitlelang"]) if "subtitlelang" in movieinfo else None
+            )
             for experience in movie.get("experiences") or []:
                 for session in experience.get("sessions") or []:
                     shows.append(
@@ -133,6 +138,8 @@ def parse_showtimes(payload: dict, cinema: Cinema) -> list[Showtime]:
                             language=movieinfo.get("lang") or "",
                             booking_url=booking_url,
                             poster_url=poster_url,
+                            subtitles=subtitles,
+                            info_url=info_url,
                             latitude=latitude,
                             longitude=longitude,
                         )

@@ -12,9 +12,20 @@ import { addDays, makeShowtime } from "./models.js";
 export const SNAPSHOT_URL = "data/showtimes.json";
 /** Older than this, the page fetches live instead (the job runs every 6 h; cron can run late). */
 export const SNAPSHOT_MAX_AGE_MS = 13 * 3600 * 1000;
-export const SNAPSHOT_VERSION = 1;
+export const SNAPSHOT_VERSION = 2;
 
-const MOVIE_FIELDS = ["chain", "movie_title", "duration_mins", "rating", "language", "booking_url", "poster_url", "poster_small_url"];
+const MOVIE_FIELDS = [
+  "chain",
+  "movie_title",
+  "duration_mins",
+  "rating",
+  "language",
+  "booking_url",
+  "poster_url",
+  "poster_small_url",
+  "subtitles",
+  "info_url",
+];
 const CINEMA_FIELDS = ["chain", "cinema_id", "name", "region", "state", "hall_group", "latitude", "longitude"];
 
 function table() {

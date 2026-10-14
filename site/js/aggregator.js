@@ -84,6 +84,14 @@ export function summarizeMovies(showtimes) {
       cinemaCount: new Set(shows.map((s) => `${s.chain}|${s.cinema_name}`)).size,
       firstStart: shows[0].start,
       posters: posterCandidates(shows),
+      // Per chain: subtitles (null = not known) and the chain's page about the movie.
+      byChain: Object.fromEntries(
+        [...new Set(shows.map((s) => s.chain))].sort().map((chain) => {
+          const own = shows.filter((s) => s.chain === chain);
+          const known = own.find((s) => Array.isArray(s.subtitles) && s.subtitles.length) || own.find((s) => Array.isArray(s.subtitles));
+          return [chain, { subtitles: known ? known.subtitles : null, info_url: own.find((s) => s.info_url)?.info_url || "" }];
+        }),
+      ),
       shows,
     };
   });

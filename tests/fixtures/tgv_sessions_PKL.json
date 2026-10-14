@@ -333,7 +333,11 @@
        "Horror"
       ],
       "rating": "16",
-      "runtimemins": 93
+      "runtimemins": 93,
+      "subtitlelang": [
+       "Bahasa Melayu",
+       "Chinese"
+      ]
      }
     }
    },
@@ -354,7 +358,8 @@
        "Black Comedy"
       ],
       "rating": "18",
-      "runtimemins": ""
+      "runtimemins": "",
+      "subtitlelang": []
      }
     }
    }

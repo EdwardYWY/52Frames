@@ -133,6 +133,13 @@ class TgvShowtimeParsingTest(unittest.TestCase):
         digger = [s for s in self.shows if s.movie_title == "Digger"][0]
         self.assertEqual(digger.poster_url, "")
 
+    def test_subtitles_and_movie_page(self):
+        mommy = [s for s in self.shows if s.movie_title == "Other Mommy"][0]
+        self.assertEqual(mommy.subtitles, ("BM", "Chinese"))
+        self.assertEqual(mommy.info_url, "https://www.tgv.com.my/movie/other-mommy")
+        digger = [s for s in self.shows if s.movie_title == "Digger"][0]
+        self.assertEqual(digger.subtitles, ())
+
     def test_blank_runtime_becomes_none(self):
         digger = [s for s in self.shows if s.movie_title == "Digger"][0]
         self.assertIsNone(digger.duration_mins)

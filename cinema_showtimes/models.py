@@ -36,6 +36,32 @@ def float_or_none(value) -> float | None:
     return number if math.isfinite(number) else None
 
 
+# Both chains name subtitle languages differently ("Bahasa Melayu" vs "BM", "Chinese" vs "CHI").
+_SUBTITLE_NAMES = {
+    "bm": "BM",
+    "bahasa melayu": "BM",
+    "malay": "BM",
+    "chi": "Chinese",
+    "chinese": "Chinese",
+    "eng": "English",
+    "english": "English",
+    "tam": "Tamil",
+    "tamil": "Tamil",
+}
+
+
+def normalize_subtitles(names) -> tuple[str, ...]:
+    out: list[str] = []
+    for name in names or ():
+        name = str(name).strip()
+        if not name or name in {"-", "NA", "N/A"}:
+            continue
+        label = _SUBTITLE_NAMES.get(name.lower(), name)
+        if label not in out:
+            out.append(label)
+    return tuple(out)
+
+
 def today_myt() -> date:
     return datetime.now(MYT).date()
 
@@ -72,6 +98,10 @@ class Showtime:
     # Largest poster this chain offers, and a smaller one if it has one.
     poster_url: str = ""
     poster_small_url: str = ""
+    # Subtitle languages as the chain lists them ("BM", "Chinese", ...); None when unknown.
+    subtitles: tuple[str, ...] | None = None
+    # The chain's page about the movie (not the booking page).
+    info_url: str = ""
     # Where the cinema is, when the chain says (GSC: cinema list; TGV: map link per cinema).
     latitude: float | None = None
     longitude: float | None = None

@@ -4,7 +4,7 @@
 // Nothing here touches the page. Network and XML parsing are injectable so Node tests can
 // run the parsers against tests/fixtures/ without a browser.
 
-import { floatOrNull, intOrNull, makeShowtime } from "./models.js";
+import { floatOrNull, intOrNull, makeShowtime, normalizeSubtitles } from "./models.js";
 
 // ---------------------------------------------------------------------------- GSC
 
@@ -109,6 +109,41 @@ export function parseGscShowtimes(xmlText, cinema, parseXml = domParseXml) {
   return shows;
 }
 
+// GSC's showtime data has no subtitles; its public movie pages (www.gsc.com.my/movie/<slug>/) do.
+// Those pages are server-rendered HTML with no data feed, so only the snapshot job reads them
+// (once per movie per run), never the visitor's browser.
+
+GSC.siteUrl = "https://www.gsc.com.my";
+
+/** Movie page slugs linked from the GSC homepage. */
+export function gscMovieSlugs(html) {
+  return [...new Set([...String(html).matchAll(/href="\/movie\/([a-z0-9-]+)\/?"/g)].map((m) => m[1]))];
+}
+
+const squash = (text) => String(text).toLowerCase().replace(/&amp;/g, "and").replace(/[^a-z0-9]/g, "");
+
+/**
+ * The slug of a GSC title: its letters and digits match the slug's, with or without a leading
+ * "(RERUN)"-style tag. GSC cuts slugs at 50 characters, so a long slug may match a title's start.
+ */
+export function findGscSlug(title, slugs) {
+  for (const candidate of [title, String(title).replace(/[([][^)\]]*[)\]]/g, " ")]) {
+    const want = squash(candidate);
+    if (!want) continue;
+    const exact = slugs.find((slug) => squash(slug) === want);
+    if (exact) return exact;
+    const cut = slugs.find((slug) => slug.length >= 45 && want.startsWith(squash(slug)));
+    if (cut) return cut;
+  }
+  return null;
+}
+
+/** Subtitles from a GSC movie page ("BM / CHI / ENG"), or null when the page doesn't say. */
+export function parseGscSubtitles(html) {
+  const match = />Subtitles<\/span>\s*<span[^>]*>\s*:?\s*([^<]*)<\/span>/.exec(String(html));
+  return match ? normalizeSubtitles(match[1].split("/")) : null;
+}
+
 // ---------------------------------------------------------------------------- TGV
 
 export const TGV = {
@@ -116,6 +151,7 @@ export const TGV = {
   statesUrl: "https://api.tgv.com.my/api/cinemas/v1/getstatecinema",
   sessionsUrl: "https://api.tgv.com.my/api/boxoffice/v1/moviesession_get",
   movieUrl: "https://www.tgv.com.my/movies/details",
+  infoUrl: "https://www.tgv.com.my/movie",
 };
 
 // TGV groups cinemas by state; map them onto the shared regions GSC uses.
@@ -210,6 +246,8 @@ export function parseTgvShowtimes(payload, cinema) {
       const title = info.name || "Unknown movie";
       const bookingUrl = info.itemkey ? `${TGV.movieUrl}/${info.itemkey}` : "";
       const posterUrl = tgvPosterUrl(info);
+      const infoUrl = info.itemkey ? `${TGV.infoUrl}/${info.itemkey}` : "";
+      const subtitles = "subtitlelang" in movieinfo ? normalizeSubtitles(movieinfo.subtitlelang) : null;
       for (const experience of movie.experiences || []) {
         for (const session of experience.sessions || []) {
           shows.push(
@@ -228,6 +266,8 @@ export function parseTgvShowtimes(payload, cinema) {
               language: movieinfo.lang || "",
               booking_url: bookingUrl,
               poster_url: posterUrl,
+              subtitles,
+              info_url: infoUrl,
               latitude,
               longitude,
             }),

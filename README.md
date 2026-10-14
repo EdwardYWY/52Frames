@@ -72,6 +72,11 @@ build step, no dependencies.
   earliest show, nearest, name or most shows) or **by time** (one list of every show), plus cinema
   and start-time dropdowns. Each time links to the chain's booking page, where seats are chosen.
   Sold-out times are struck through, started ones dimmed, after-midnight ones marked `+1`.
+- **Subtitles** per chain ("Subtitles (GSC)", "Subtitles (TGV)") with a link to each chain's page
+  about the movie; they often differ. TGV lists them in its sessions data. GSC only shows them on
+  its public movie pages, so the snapshot job reads those (one page per movie per run; titles are
+  matched to GSC's page links by their letters and digits). Pages that don't say show
+  "Not listed"; the live fallback has TGV's only.
 - **Posters** come from both chains; when both have one, the higher-resolution one is used where
   it matters (GSC's 500 px poster in the movie view) and the browser picks a lighter one for the grid.
 - **Location** (optional, top bar): shows the distance to each cinema and enables "Nearest". GSC
