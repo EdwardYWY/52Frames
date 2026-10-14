@@ -2,15 +2,15 @@
 // manage starred cinemas. Fetching and parsing live in providers.js; grouping and caching in
 // aggregator.js.
 
-import { collectShowtimes, createCache, filterShowtimes, summarizeMovies, uniqueShows } from "./aggregator.js?v=15";
-import { REGIONS, movieGroupKey, distanceKm, normalizeLanguage, normalizeTitle, todayMyt } from "./models.js?v=15";
-import { TGV_LOCATIONS, TGV_NAMES } from "./places.js?v=15";
-import { createProviders, domParseXml } from "./providers.js?v=15";
-import { enhanceSelect } from "./select.js?v=15";
-import { collectCatalogue } from "./catalog.js?v=15";
-import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=15";
-import { loadSnapshot } from "./snapshot.js?v=15";
-import { enableSeatPreview } from "./seatmap.js?v=15";
+import { collectShowtimes, createCache, filterShowtimes, summarizeMovies, uniqueShows } from "./aggregator.js?v=16";
+import { REGIONS, movieGroupKey, distanceKm, normalizeLanguage, normalizeTitle, todayMyt } from "./models.js?v=16";
+import { TGV_LOCATIONS, TGV_NAMES } from "./places.js?v=16";
+import { createProviders, domParseXml } from "./providers.js?v=16";
+import { enhanceSelect } from "./select.js?v=16";
+import { collectCatalogue } from "./catalog.js?v=16";
+import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=16";
+import { loadSnapshot } from "./snapshot.js?v=16";
+import { enableSeatPreview } from "./seatmap.js?v=16";
 
 const $ = (id) => document.getElementById(id);
 const providers = createProviders();
@@ -610,8 +610,8 @@ async function load(view = state.main) {
   const chains = selectedChains();
   const region = regionOf(view);
   if (!chains.length) {
+    // Not an error: the grid and the movie view say to pick a chain.
     view.loading = false;
-    view.errors.push("Pick at least one chain.");
     render();
     return;
   }
@@ -759,8 +759,8 @@ function renderStatus() {
   const list = el("ul", {}, errors.map((e) => el("li", {}, e)));
   $("warnings").replaceChildren(
     errors.length <= 2
-      ? el("div", { class: "warn" }, el("strong", {}, view.errors.length ? "Some data is missing. " : ""), list)
-      : el("details", { class: "warn" }, el("summary", {}, `${plural(errors.length, "source")} did not respond. The rest are shown.`), list),
+      ? el("div", { class: "warn" }, el("strong", {}, view.errors.length ? "Some cinemas didn't answer, so a few times may be missing." : ""), list)
+      : el("details", { class: "warn" }, el("summary", {}, `${plural(errors.length, "cinema")} didn't answer, so a few times may be missing.`), list),
   );
 }
 
@@ -838,7 +838,7 @@ function renderGrid() {
   for (const movie of movies) movie.title = titles.get(movie.key) || movie.title;
   for (const m of movies) state.lastSummary.set(m.key, m);
   $("count").textContent = `${plural(movies.length, "movie")} · ${plural(new Set(visible.map(venueKey)).size, "cinema")}`;
-  $("grid").replaceChildren(...(movies.length ? movies.map(m => movieCard(m)) : [el("p", { class: "empty" }, view.loading ? "Loading movies and advance sales…" : "No movies match these filters.")]));
+  $("grid").replaceChildren(...(movies.length ? movies.map(m => movieCard(m)) : [el("p", { class: "empty" }, !selectedChains().length ? "Pick GSC, TGV or both to see what's showing." : view.loading ? "Loading movies and advance sales…" : "No movies match these filters.")]));
 }
 
 /** Text for a day with nothing loaded: unpublished schedule, or a real failure. */
@@ -1013,7 +1013,9 @@ function renderSheet() {
 
   if (!shows.length) {
     const p = dateParts(view.date);
-    const text = view.loading
+    const text = !selectedChains().length
+      ? "Pick GSC, TGV or both to see what's showing."
+      : view.loading
       ? "Loading showtimes…"
       : all.length
         ? onlyStarred($("m-cinema"))

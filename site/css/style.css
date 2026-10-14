@@ -136,12 +136,6 @@ h1 { margin: 0; font: var(--w-display) clamp(40px, 8vw, 76px)/0.9 var(--f-displa
 .intro-rule { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
 .intro-rule .mono { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.hazard {
-  flex: 1; height: 8px; min-width: 40px;
-  background: repeating-linear-gradient(-45deg, var(--ink) 0 6px, transparent 6px 12px);
-  opacity: 0.85;
-}
-.hazard.thin { display: block; height: 4px; opacity: 0.3; }
 
 /* ----------------------------------------------------------------- controls */
 
@@ -273,12 +267,14 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
 .progress.done .bar span { background: var(--accent); }
 .progress .mono { color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-.warn { border-left: 3px solid var(--warn); background: var(--warn-bg); color: var(--ink); padding: 8px 12px; margin-bottom: 8px; font-size: 13px; }
-.warn summary { cursor: pointer; font-weight: 600; }
+/* A quiet note, not an alarm: the rest of the page still works. */
+.warn { border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); padding: 10px 14px; margin-bottom: 10px; font-size: 13.5px; }
+.warn strong { font-weight: 600; color: var(--ink); }
+.warn summary { cursor: pointer; font-weight: 600; color: var(--ink); }
 .warn ul { margin: 6px 0 0; padding-left: 18px; }
 .warn li { overflow-wrap: anywhere; }
 
-.empty { border: 1px dashed var(--line); padding: 28px 16px; text-align: center; color: var(--muted); margin: 0; }
+.empty { border: 1px solid var(--line); border-radius: var(--r-panel); background: var(--surface); padding: 28px 16px; text-align: center; color: var(--ink-2); margin: 0; }
 
 /* -------------------------------------------------------------- poster grid */
 
@@ -339,11 +335,6 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
   background: var(--surface); border: 1px solid var(--line-strong); overscroll-behavior: contain;
   box-shadow: 0 24px 60px rgb(0 0 0 / 0.35);
 }
-.stars-sheet .sheet-panel::before {
-  /* Top rule: ink with a yellow lead-in. */
-  content: ""; position: sticky; top: 0; grid-column: 1 / -1; height: 4px; z-index: 2;
-  background: linear-gradient(90deg, var(--accent) 0 96px, var(--ink) 96px);
-}
 
 /* Movie header: back, title and dates stay pinned while the schedule scrolls. */
 .m-head {
@@ -380,7 +371,6 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
 .m-main { padding: 4px 22px 28px; min-width: 0; }
 
 .sec-head { display: flex; align-items: center; gap: 10px; margin: 18px 0 12px; }
-.sec-no { font: 700 12px/1 var(--f-label); color: var(--on-accent); background: var(--accent); padding: 4px 6px; letter-spacing: 0.04em; }
 .sec-head h3 { margin: 0; font: var(--w-display) 18px/1 var(--f-display); }
 .sec-rule { flex: 1; height: 1px; background: var(--line); min-width: 16px; }
 .sec-head .mono { color: var(--muted); white-space: nowrap; }

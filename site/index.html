@@ -15,8 +15,8 @@
     document.documentElement.dataset.theme = theme === "light" ? "light" : "dark";
   })();
 </script>
-<link rel="stylesheet" href="css/style.css?v=15">
-<script type="module" src="js/app.js?v=15"></script>
+<link rel="stylesheet" href="css/style.css?v=16">
+<script type="module" src="js/app.js?v=16"></script>
 </head>
 <body>
 
@@ -92,7 +92,6 @@
   <div class="grid" id="grid"></div>
 
   <footer class="foot">
-    <span class="hazard thin" aria-hidden="true"></span>
     <p>Times are Malaysia time. Tap a time to book on the chain's own site; seats are chosen there.
       ☆ a cinema to keep it at the top; stars and your location stay in this browser only.
       Struck-through times are sold out; <b class="mono">+1</b> marks shows after midnight.</p>
@@ -110,10 +109,10 @@
       <h2 id="stars-title">Starred cinemas</h2>
       <p class="stars-note">Starred cinemas are listed first in every movie, and the cinema menus can show them alone.
         Saved in this browser only (local storage); nothing is sent anywhere.</p>
-      <div class="sec-head"><span class="sec-no">01</span><h3>Starred</h3><span class="sec-rule"></span>
+      <div class="sec-head"><h3>Starred</h3><span class="sec-rule"></span>
         <button type="button" class="link-btn mono" id="stars-clear">Clear all</button></div>
       <div id="stars-mine"></div>
-      <div class="sec-head"><span class="sec-no">02</span><h3>Add from</h3><span class="sec-rule"></span></div>
+      <div class="sec-head"><h3>Add from</h3><span class="sec-rule"></span></div>
       <div class="m-controls">
         <label class="field"><span class="label">Region</span><span class="select"><select id="stars-region"></select></span></label>
         <label class="field"><span class="label">Chain</span><span class="select"><select id="stars-chain">
