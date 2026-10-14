@@ -2,12 +2,14 @@
 // manage starred cinemas. Fetching and parsing live in providers.js; grouping and caching in
 // aggregator.js.
 
-import { collectShowtimes, createCache, filterShowtimes, summarizeMovies } from "./aggregator.js";
-import { REGIONS, addDays, distanceKm, normalizeTitle, todayMyt } from "./models.js";
-import { TGV_LOCATIONS } from "./places.js";
-import { createProviders } from "./providers.js";
-import { enhanceSelect } from "./select.js";
-import { loadSnapshot } from "./snapshot.js";
+import { collectShowtimes, createCache, filterShowtimes, summarizeMovies } from "./aggregator.js?v=4";
+import { REGIONS, distanceKm, normalizeTitle, todayMyt } from "./models.js?v=4";
+import { TGV_LOCATIONS } from "./places.js?v=4";
+import { createProviders, domParseXml } from "./providers.js?v=4";
+import { enhanceSelect } from "./select.js?v=4";
+import { collectCatalogue } from "./catalog.js?v=4";
+import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=4";
+import { loadSnapshot } from "./snapshot.js?v=4";
 
 const $ = (id) => document.getElementById(id);
 const providers = createProviders();
@@ -109,6 +111,7 @@ function savePrefs() {
     chains: selectedChains(),
     group: selectedGroup(),
     location: Boolean(state.here),
+    hideConcerts: $("hide-concerts").checked,
   });
 }
 
@@ -346,32 +349,18 @@ function posterFrame(summary, sizes) {
 
 // ---------------------------------------------------------------- controls
 
-const DAYS = 7;
 const emptyKey = (date) => `${date}|${$("region").value}`;
-
-/** Build or refresh a 7-day strip (today + 6). Days with no schedule yet are marked. */
 function renderDateStrip(strip, name, date) {
-  if (!strip.childElementCount) {
-    for (let i = 0; i < DAYS; i++) {
-      const iso = addDays(todayMyt(), i);
-      const p = dateParts(iso);
-      strip.append(
-        el(
-          "label",
-          { class: "day", title: p.long },
-          el("input", { type: "radio", name, value: iso }),
-          el("span", {}, el("small", {}, i === 0 ? "Today" : p.weekday), el("b", {}, String(p.day)), el("small", { class: "day-month" }, p.month)),
-        ),
-      );
-    }
-  }
-  for (const label of strip.children) {
-    const input = label.querySelector("input");
-    input.checked = input.value === date;
-    const empty = state.emptyDates.has(emptyKey(input.value));
-    label.classList.toggle("nodata", empty);
-    label.title = `${dateParts(input.value).long}${empty ? " · schedule not published yet" : ""}`;
-  }
+  const atCinema = matchesCinema($("cinema"));
+  const dates = [...new Set(state.main.shows.filter(s => s.movie_key === state.movieKey && atCinema(s)).map(s => s.business_date))].sort();
+  if (!dates.includes(date)) dates.push(date);
+  dates.sort();
+  strip.replaceChildren(...dates.map(iso => {
+    const p = dateParts(iso);
+    return el("label", { class: "day", title: p.long },
+      el("input", { type: "radio", name, value: iso, checked: iso === date }),
+      el("span", {}, el("small", {}, iso === todayMyt() ? "Today" : p.weekday), el("b", {}, String(p.day)), el("small", { class: "day-month" }, p.month)));
+  }));
 }
 
 function setDate(view, iso) {
@@ -514,9 +503,13 @@ async function load(view = state.main) {
   // chains at all; fetch live only for a day it doesn't have, or when it's missing or stale.
   const snap = await snapshotOnce();
   if (!current()) return;
-  if (snap?.days.includes(date)) {
+  if (snap && view === state.sheet) {
+    const dates = [...new Set(snap.showtimes.filter(s => s.movie_key === state.movieKey && inScope(s.chain, s.region, chains) && matchesCinema($("cinema"))(s)).map(s => s.business_date))].sort();
+    if (dates.length && !dates.includes(view.date)) view.date = dates[0];
+  }
+  if (snap && (view === state.main || snap.days.includes(view.date))) {
     view.cinemas = snap.cinemas.filter((c) => inScope(c.chain, c.region, chains));
-    view.shows = snap.showtimes.filter((s) => s.business_date === date && inScope(s.chain, s.region, chains));
+    view.shows = snap.showtimes.filter((s) => (view === state.main || s.business_date === view.date) && inScope(s.chain, s.region, chains));
     view.errors = (snap.errors[date] || []).filter((e) =>
       /could not load cinemas/.test(e) ? chains.some((c) => e.startsWith(c)) : view.cinemas.some((c) => e.startsWith(`${c.chain} ${c.name}:`)),
     );
@@ -529,6 +522,26 @@ async function load(view = state.main) {
   }
 
   try {
+    if (view === state.main) {
+      const result = await collectCatalogue({ parseXml: domParseXml, chains, region: $("region").value, signal: controller.signal,
+        onProgress: progress => { if (current()) { view.progress = progress; scheduleRender(); } } });
+      if (!current()) return;
+      view.shows = result.showtimes;
+      view.cinemas = result.cinemas;
+      view.errors = result.errors;
+      rememberCinemaPlaces(view.cinemas);
+      rememberPlaces(view.shows);
+      finishLoad(view);
+      if (state.movieKey) load(state.sheet);
+      return;
+    }
+    const available = state.main.shows.filter(s => s.business_date === date);
+    if (available.length && !state.main.loading) {
+      view.shows = available;
+      view.cinemas = state.main.cinemas;
+      finishLoad(view);
+      return;
+    }
     await collectShowtimes(date, {
       providers,
       chains,
@@ -631,15 +644,14 @@ function renderStatus() {
 const cards = new Map(); // movie key -> card element, reused so posters don't reload
 const GRID_SIZES = "(max-width: 560px) 46vw, (max-width: 1100px) 24vw, 220px";
 
-function movieCard(summary, nextDate = null) {
+function movieCard(summary) {
   let card = cards.get(summary.key);
   if (!card) {
     card = el(
       "a",
       { class: "card", href: `#/movie/${encodeURIComponent(summary.key)}` },
       posterFrame(summary, GRID_SIZES),
-      el("span", { class: "card-count mono" }),
-      el("div", { class: "card-body" }, el("h3"), el("div", { class: "card-meta mono" })),
+      el("div", { class: "card-body" }, el("h3"), el("div", { class: "card-shows mono" }), el("div", { class: "card-status mono" }), el("div", { class: "card-meta mono" })),
     );
     cards.set(summary.key, card);
   }
@@ -650,11 +662,10 @@ function movieCard(summary, nextDate = null) {
     frame.classList.remove("no-img");
     frame.prepend(posterImage(summary.posters, GRID_SIZES, `${summary.title} poster`));
   }
-  // A search hit that isn't on the chosen day: greyed, with the day it next shows.
-  card.classList.toggle("later", Boolean(nextDate));
-  card.dataset.next = nextDate || "";
-  const p = nextDate ? dateParts(nextDate) : null;
-  card.querySelector(".card-count").textContent = p ? `Next: ${p.weekday} ${p.day} ${p.month}` : plural(summary.showCount, "show");
+  card.classList.remove("later");
+  card.dataset.next = summary.nextDate;
+  card.querySelector(".card-status").textContent = screeningLabel(summary.nextDate, todayMyt());
+  card.querySelector(".card-shows").textContent = plural(summary.showCount, "show");
   card.querySelector("h3").textContent = summary.title;
   card.querySelector(".card-meta").textContent = [runtime(summary.duration_mins), summary.rating, summary.language]
     .filter(Boolean)
@@ -672,66 +683,16 @@ function matchesSearch(show, query) {
   return show.movie_title.toLowerCase().includes(raw) || (key && show.movie_key.includes(key));
 }
 
-// Every day the snapshot has, so search covers the whole week (a live-only visit searches one day).
-let weekAll = null;
-
 function renderGrid() {
   const view = state.main;
-  const keys = view.cinemas.length ? view.cinemas.map((c) => `${c.chain}|${c.name}`) : [...new Set(view.shows.map(venueKey))];
+  const keys = view.cinemas.length ? view.cinemas.map(c => `${c.chain}|${c.name}`) : [...new Set(view.shows.map(venueKey))];
   fillCinemaSelect($("cinema"), keys, "All cinemas");
-
-  const query = searchText();
   const atCinema = matchesCinema($("cinema"));
-  const visible = view.shows.filter((s) => atCinema(s) && matchesSearch(s, query));
-  const movies = summarizeMovies(visible);
-  for (const m of summarizeMovies(view.shows)) state.lastSummary.set(m.key, m);
-
-  const sort = $("sort").value;
-  movies.sort((a, b) =>
-    sort === "title"
-      ? a.title.localeCompare(b.title)
-      : sort === "time"
-        ? cmp(a.firstStart, b.firstStart) || a.title.localeCompare(b.title)
-        : b.showCount - a.showCount || a.title.localeCompare(b.title),
-  );
-
-  // Searching: also list matches showing on other days this week, greyed, with their next day.
-  const later = [];
-  const weekShows = query && weekAll ? weekAll.filter((s) => inScope(s.chain, s.region)) : null;
-  if (weekShows) {
-    const today = new Set(movies.map((m) => m.key));
-    const elsewhere = weekShows.filter((s) => s.business_date > view.date && atCinema(s) && matchesSearch(s, query) && !today.has(s.movie_key));
-    for (const m of summarizeMovies(elsewhere)) {
-      state.lastSummary.set(m.key, m);
-      later.push({ summary: m, next: m.shows.map((s) => s.business_date).sort()[0] });
-    }
-    later.sort((a, b) => cmp(a.next, b.next) || a.summary.title.localeCompare(b.summary.title));
-  }
-
-  $("count").textContent = view.shows.length
-    ? `${plural(movies.length, "movie")} · ${plural(new Set(visible.map(venueKey)).size, "cinema")}` + (later.length ? ` · ${later.length} later this week` : "")
-    : "";
-  $("intro-date").textContent = `${dateParts(view.date).long} · ${regionLabel()}`;
-  renderDateStrip($("dates"), "date", view.date);
-
-  if (!movies.length && !later.length) {
-    const text = view.loading
-      ? "Loading what's on…"
-      : query
-        ? `No movie matching “${query}” in ${regionLabel()}${weekAll ? " this week" : " on this day"}.`
-        : view.shows.length
-          ? onlyStarred($("cinema"))
-            ? "Nothing at your starred cinemas on this day."
-            : "Nothing at the chosen cinemas on this day."
-          : notPublishedText(view);
-    $("grid").replaceChildren(el("p", { class: "empty" }, text));
-    return;
-  }
-  $("grid").replaceChildren(
-    ...movies.map((m) => movieCard(m)),
-    ...(later.length ? [el("p", { class: "grid-note mono" }, "Later this week")] : []),
-    ...later.map(({ summary, next }) => movieCard(summary, next)),
-  );
+  const visible = view.shows.filter(s => atCinema(s) && matchesSearch(s, searchText()) && (!$("hide-concerts").checked || !isConcert(s)));
+  const movies = browseMovies(visible, { today: todayMyt(), sort: $("sort").value });
+  for (const m of movies) state.lastSummary.set(m.key, m);
+  $("count").textContent = `${plural(movies.length, "movie")} · ${plural(new Set(visible.map(venueKey)).size, "cinema")}`;
+  $("grid").replaceChildren(...(movies.length ? movies.map(m => movieCard(m)) : [el("p", { class: "empty" }, view.loading ? "Loading movies and advance sales…" : "No movies match these filters.")]));
 }
 
 /** Text for a day with nothing loaded: unpublished schedule, or a real failure. */
@@ -755,7 +716,7 @@ function timeChip(show, now) {
     show.booking_url ? "a" : "span",
     { class: `time${show.sold_out ? " full" : ""}${past ? " past" : ""}`, title: label, "aria-label": label },
     el("b", {}, hhmm(show.start)),
-    overnight ? el("sup", {}, "+1") : null,
+    overnight ? el("span", { class: "overnight", title: "After midnight, on the following calendar day" }, "+1") : null,
     show.experience ? el("i", {}, show.experience) : null,
   );
   if (show.booking_url) Object.assign(chip, { href: show.booking_url, target: "_blank", rel: "noopener" });
@@ -766,7 +727,7 @@ function venueBlock(key, shows, now, forceOpen) {
   const [chain, name] = splitKey(key);
   const ahead = shows.filter((s) => s.start >= now);
   const previewFrom = ahead.length ? ahead : shows;
-  const preview = previewFrom.slice(0, 4).map((s) => hhmm(s.start)).join("  ");
+  const preview = previewFrom.slice(0, 4).map((s) => overnightLabel(s)).join("  ");
   const upcoming = shows.find((s) => s.start >= now && !s.sold_out);
   const km = kmLabel(kmTo(key));
   return el(
@@ -794,7 +755,7 @@ function venueBlock(key, shows, now, forceOpen) {
         "span",
         { class: "venue-sum mono" },
         el("span", { class: "venue-preview" }, preview + (previewFrom.length > 4 ? "  …" : "")),
-        el("span", {}, upcoming ? `${plural(shows.length, "show")} · next ${hhmm(upcoming.start)}` : plural(shows.length, "show")),
+        el("span", {}, upcoming ? `${plural(shows.length, "show")} · next ${overnightLabel(upcoming)}` : plural(shows.length, "show")),
       ),
       el("span", { class: "chev", "aria-hidden": "true" }),
     ),
@@ -810,7 +771,7 @@ function timeRow(show, now) {
   const row = el(
     show.booking_url ? "a" : "div",
     { class: `trow${show.sold_out ? " full" : ""}${past ? " past" : ""}` },
-    el("span", { class: "trow-time" }, hhmm(show.start), overnight ? el("sup", {}, "+1") : null),
+    el("span", { class: "trow-time" }, hhmm(show.start), overnight ? el("span", { class: "overnight", title: "After midnight, on the following calendar day" }, "+1") : null),
     el(
       "span",
       { class: "trow-where" },
@@ -863,6 +824,7 @@ function renderSheet() {
         ["Runtime", runtime(summary.duration_mins)],
         ["Rating", summary.rating],
         ["Language", summary.language],
+        ["Genres", [...new Set(all.flatMap(s => s.genres || []))].join(", ")],
         ...Object.entries(summary.byChain || {}).map(subtitleRow),
         ["Region", regionLabel()],
       ].filter(([, v]) => v)
@@ -944,7 +906,7 @@ function route() {
   $("sheet").hidden = !key;
   document.body.classList.toggle("locked", Boolean(key) || !$("stars").hidden);
   if (opening) {
-    state.sheet.date = state.pendingSheetDate || state.main.date;
+    state.sheet.date = state.pendingSheetDate || [...new Set(state.main.shows.filter(s => s.movie_key === key && matchesCinema($("cinema"))(s)).map(s => s.business_date))].sort()[0] || todayMyt();
     state.pendingSheetDate = null;
     load(state.sheet);
     returnFocus = document.activeElement;
@@ -975,6 +937,7 @@ function renderFilterSummary() {
   if ($("sort").value !== "shows") parts.push($("sort").selectedOptions[0].text);
   const chains = selectedChains();
   if (chains.length !== 2) parts.push(chains.length ? `${chains[0]} only` : "No chain");
+  parts.push($("hide-concerts").checked ? "Concerts hidden" : "Concerts included");
   if (searchText()) parts.push(`“${searchText()}”`);
   $("filters-summary").textContent = parts.join(" · ");
 }
@@ -1006,6 +969,7 @@ async function init() {
   }
   // "By time" by default; once someone picks a grouping, keep it.
   if (saved.group === "cinema") document.querySelector("input[name=group][value=cinema]").checked = true;
+  $("hide-concerts").checked = saved.hideConcerts !== false;
   fillAfterOptions();
   for (const id of ["region", "sort", "cinema", "m-cinema", "m-after", "m-sort", "stars-region", "stars-chain"]) {
     dropdowns.push(enhanceSelect($(id), id.endsWith("cinema") ? { summary: cinemaSummary } : {}));
@@ -1021,10 +985,11 @@ async function init() {
   $("region").addEventListener("change", reloadAll);
   for (const box of document.querySelectorAll("input[name=chain]")) box.addEventListener("change", reloadAll);
   // The two date strips are independent: the movie view's date doesn't move the main page's.
-  $("dates").addEventListener("change", (e) => setDate(state.main, e.target.value));
+
   $("m-dates").addEventListener("change", (e) => setDate(state.sheet, e.target.value));
   for (const id of ["cinema", "m-cinema"]) $(id).addEventListener("change", (e) => tidyCinemaChoice(e.target));
   for (const id of ["cinema", "sort"]) $(id).addEventListener("change", render);
+  $("hide-concerts").addEventListener("change", () => { savePrefs(); render(); });
   $("q").addEventListener("input", render);
   $("filters-toggle").addEventListener("click", () => toggleFilters());
   $("q").addEventListener("keydown", (e) => {
@@ -1092,8 +1057,7 @@ async function init() {
   load(state.main);
   route();
   snapshotOnce().then((snap) => {
-    weekAll = snap?.showtimes || null;
-    if (searchText()) render();
+    if (snap) render();
   });
 
   // Turn location back on without a prompt if the visitor already allowed it.

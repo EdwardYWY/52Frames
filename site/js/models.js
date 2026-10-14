@@ -25,6 +25,11 @@ export function normalizeTitle(title) {
 }
 
 /** Same field names as Showtime.to_dict() in Python. `start` is "YYYY-MM-DDTHH:MM" (MYT). */
+export function normalizeGenres(genres) {
+  const aliases = { 'action adventure': ['Action', 'Adventure'], 'drama and romance': ['Drama', 'Romance'] };
+  return [...new Set((genres || []).flatMap(label => String(label).split(',').flatMap(part => aliases[part.trim().toLowerCase()] || [part.trim()])).filter(Boolean))];
+}
+
 export function makeShowtime(fields) {
   const show = {
     chain: "",
@@ -39,6 +44,8 @@ export function makeShowtime(fields) {
     duration_mins: null,
     rating: "",
     language: "",
+    genres: [],
+    tags: [],
     sold_out: false,
     booking_url: "",
     poster_url: "",
@@ -51,6 +58,7 @@ export function makeShowtime(fields) {
     ...fields,
   };
   if (!show.movie_key) show.movie_key = normalizeTitle(show.movie_title);
+  show.genres = normalizeGenres(show.genres);
   return show;
 }
 

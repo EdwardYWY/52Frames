@@ -113,6 +113,8 @@ def parse_showtimes(payload: dict, cinema: Cinema) -> list[Showtime]:
         for movie in day_cinema.get("movies") or []:
             info = movies.get(movie.get("movieid"), {})
             movieinfo = (info.get("extdata") or {}).get("movieinfo") or {}
+            raw_tags = (info.get("extdata") or {}).get("tags") or ()
+            tags = tuple(raw_tags) if isinstance(raw_tags, (list, tuple)) else (raw_tags,)
             title = info.get("name") or "Unknown movie"
             booking_url = f"{MOVIE_URL}/{info['itemkey']}" if info.get("itemkey") else ""
             poster_url = _poster_url(info)
@@ -136,6 +138,8 @@ def parse_showtimes(payload: dict, cinema: Cinema) -> list[Showtime]:
                             duration_mins=_int_or_none(movieinfo.get("runtimemins")),
                             rating=str(movieinfo.get("rating") or ""),
                             language=movieinfo.get("lang") or "",
+                            genres=tuple(movieinfo.get("genre") or ()),
+                            tags=tags,
                             booking_url=booking_url,
                             poster_url=poster_url,
                             subtitles=subtitles,

@@ -1,5 +1,5 @@
 // The shared snapshot: a scheduled GitHub Action (scripts/snapshot.mjs) fetches every cinema for
-// the next 7 days, every 6 hours, and publishes one compact file, data/showtimes.json. Browsers
+// all published booking dates, every 6 hours, and publishes one compact file, data/showtimes.json. Browsers
 // load that single file instead of calling GSC and TGV, so the load on the chains is the same
 // however many people use the site, and switching dates or regions needs no further requests.
 //
@@ -7,12 +7,12 @@
 // numbers:  [day, cinema, movie, minute, experience, hall, soldOut]
 // where minute counts from midnight of the business day (>= 1440 means after midnight).
 
-import { addDays, makeShowtime } from "./models.js";
+import { addDays, makeShowtime } from "./models.js?v=4";
 
 export const SNAPSHOT_URL = "data/showtimes.json";
 /** Older than this, the page fetches live instead (the job runs every 6 h; cron can run late). */
 export const SNAPSHOT_MAX_AGE_MS = 13 * 3600 * 1000;
-export const SNAPSHOT_VERSION = 2;
+export const SNAPSHOT_VERSION = 3;
 
 const MOVIE_FIELDS = [
   "chain",
@@ -25,6 +25,8 @@ const MOVIE_FIELDS = [
   "poster_small_url",
   "subtitles",
   "info_url",
+  "genres",
+  "tags",
 ];
 const CINEMA_FIELDS = ["chain", "cinema_id", "name", "region", "state", "hall_group", "latitude", "longitude"];
 
