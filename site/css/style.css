@@ -486,6 +486,8 @@ a.trow:hover .trow-what, a.trow:hover .trow-go, a.trow.holding .trow-what, a.tro
 /* ------------------------------------------------------- starred cinemas */
 
 .stars-sheet .sheet-panel { width: min(760px, 100%); grid-template-columns: minmax(0, 1fr); }
+/* The filters pin to the top of this panel (it has no movie header to sit under). */
+.stars-sheet .m-controls { top: 0; }
 .stars-main { padding: 22px 22px 28px; }
 .stars-main h2 { margin: 0 110px 8px 0; font: var(--w-display) clamp(28px, 4.4vw, 40px)/1 var(--f-display); }
 .stars-note { margin: 0 0 6px; color: var(--ink-2); font-size: 13.5px; max-width: 60ch; }
