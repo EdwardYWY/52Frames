@@ -538,6 +538,7 @@ a.trow:hover .trow-what, a.trow:hover .trow-go { color: var(--accent); }
   .toolbar .field { flex: 1 1 calc(50% - 5px); }
   .toolbar .field-wide { flex-basis: 100%; order: 3; }
   .toolbar .field-dates { flex-basis: 100%; }
+  .toolbar .field-search { flex-basis: 100%; }
   .chains { flex: 1 1 100%; order: 4; }
   .toggles .toggle { flex: 1; }
   .toggle span { justify-content: center; }
