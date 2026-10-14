@@ -4,8 +4,8 @@
 // Nothing here touches the page. Network and XML parsing are injectable so Node tests can
 // run the parsers against tests/fixtures/ without a browser.
 
-import { floatOrNull, intOrNull, makeShowtime, normalizeSubtitles } from "./models.js?v=11";
-import { tgvCinemaName } from "./places.js?v=11";
+import { floatOrNull, intOrNull, makeShowtime, normalizeSubtitles } from "./models.js?v=15";
+import { tgvCinemaName } from "./places.js?v=15";
 
 // ---------------------------------------------------------------------------- GSC
 

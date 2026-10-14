@@ -71,7 +71,7 @@ export function enableSeatPreview(root, { selector, showFor, fetchPlan }) {
     holding = target;
     origin = { x: e.clientX, y: e.clientY };
     const type = e.pointerType;
-    if (type !== "mouse") target.classList.add("holding");
+    target.classList.add("holding"); // the outline trace (style.css)
     timer = setTimeout(() => {
       cancelHold();
       // The finger is still down: the click that follows its release must not open the booking page.
