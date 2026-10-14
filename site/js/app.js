@@ -2,15 +2,15 @@
 // manage starred cinemas. Fetching and parsing live in providers.js; grouping and caching in
 // aggregator.js.
 
-import { collectShowtimes, createCache, filterShowtimes, summarizeMovies, uniqueShows } from "./aggregator.js?v=12";
-import { REGIONS, movieGroupKey, distanceKm, normalizeLanguage, normalizeTitle, todayMyt } from "./models.js?v=12";
-import { TGV_LOCATIONS, TGV_NAMES } from "./places.js?v=12";
-import { createProviders, domParseXml } from "./providers.js?v=12";
-import { enhanceSelect } from "./select.js?v=12";
-import { collectCatalogue } from "./catalog.js?v=12";
-import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=12";
-import { loadSnapshot } from "./snapshot.js?v=12";
-import { enableSeatPreview } from "./seatmap.js?v=12";
+import { collectShowtimes, createCache, filterShowtimes, summarizeMovies, uniqueShows } from "./aggregator.js?v=13";
+import { REGIONS, movieGroupKey, distanceKm, normalizeLanguage, normalizeTitle, todayMyt } from "./models.js?v=13";
+import { TGV_LOCATIONS, TGV_NAMES } from "./places.js?v=13";
+import { createProviders, domParseXml } from "./providers.js?v=13";
+import { enhanceSelect } from "./select.js?v=13";
+import { collectCatalogue } from "./catalog.js?v=13";
+import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=13";
+import { loadSnapshot } from "./snapshot.js?v=13";
+import { enableSeatPreview } from "./seatmap.js?v=13";
 
 const $ = (id) => document.getElementById(id);
 const providers = createProviders();
@@ -554,9 +554,8 @@ const onlyStarred = (select) => {
 
 // ---------------------------------------------------------------- light / dark
 
-// index.html sets the theme before the first paint; this keeps the button and the system in step.
+// index.html sets the theme before the first paint (dark unless the visitor picked light).
 const THEME_KEY = "showtimes:theme";
-const systemDark = matchMedia("(prefers-color-scheme: dark)");
 
 function renderTheme() {
   const dark = document.documentElement.dataset.theme === "dark";
@@ -576,18 +575,6 @@ function toggleTheme() {
   } catch {
     // Not remembered; that's fine.
   }
-  renderTheme();
-}
-
-function followSystemTheme() {
-  let chosen = null;
-  try {
-    chosen = storage("localStorage")?.getItem(THEME_KEY);
-  } catch {
-    // No storage: follow the device.
-  }
-  if (chosen) return;
-  document.documentElement.dataset.theme = systemDark.matches ? "dark" : "light";
   renderTheme();
 }
 
@@ -1160,7 +1147,6 @@ async function init() {
   setInterval(tickClock, 15000);
   renderTheme();
   $("theme").addEventListener("click", toggleTheme);
-  systemDark.addEventListener("change", followSystemTheme);
   // Back to top on the movie list too, once it has scrolled a screen or so.
   window.addEventListener("scroll", () => { $("page-top").hidden = window.scrollY < 600; }, { passive: true });
   $("page-top").addEventListener("click", () => {
