@@ -63,8 +63,10 @@ export function enableSeatPreview(root, { selector, showFor, fetchPlan }) {
    * moves at the same speed along the long and the short sides.
    */
   function traceOutline(target) {
-    const w = target.offsetWidth;
-    const h = target.offsetHeight;
+    // Drawn just outside the showtime, on the page's dark background, where yellow shows up.
+    const pad = 3;
+    const w = target.offsetWidth + pad * 2;
+    const h = target.offsetHeight + pad * 2;
     const ns = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(ns, "svg");
     svg.setAttribute("class", "hold-trace");
@@ -72,11 +74,15 @@ export function enableSeatPreview(root, { selector, showFor, fetchPlan }) {
     svg.setAttribute("aria-hidden", "true");
     svg.style.setProperty("--hold-ms", `${HOLD_MS - TRACE_DELAY_MS}ms`);
     svg.style.setProperty("--hold-delay", `${TRACE_DELAY_MS}ms`);
-    const path = document.createElementNS(ns, "path");
-    // From the top middle, clockwise, back to the top middle; 1px in so the 2px line isn't cut.
-    path.setAttribute("d", `M${w / 2} 1H${w - 1}V${h - 1}H1V1Z`);
-    path.setAttribute("pathLength", "1");
-    svg.append(path);
+    // From the top middle, clockwise, back to the top middle, over a black track.
+    const d = `M${w / 2} 1.5H${w - 1.5}V${h - 1.5}H1.5V1.5Z`;
+    for (const cls of ["hold-track", "hold-line"]) {
+      const path = document.createElementNS(ns, "path");
+      path.setAttribute("class", cls);
+      path.setAttribute("d", d);
+      path.setAttribute("pathLength", "1");
+      svg.append(path);
+    }
     target.append(svg);
     return svg;
   }
