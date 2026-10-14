@@ -645,11 +645,22 @@ a.trow:hover .overnight, a.trow.holding .overnight { color: var(--band-accent); 
 .seat { display: block; aspect-ratio: 1; max-width: 16px; width: 100%; justify-self: center; border-radius: 3px 3px 1px 1px; }
 .seat.free { background: transparent; box-shadow: inset 0 0 0 1.5px var(--ink-2); }
 .seat.free.pair { box-shadow: inset 0 0 0 1.5px var(--tgv); }
+/* A twin seat: two halves that meet, split by a thin line (like 日 on its side). */
+.seat.pair-l, .seat.pair-r { box-shadow: none; border: 1.5px solid var(--tgv); }
+.seat.pair-l { justify-self: end; margin-right: -1px; border-right-width: 1px; border-radius: 3px 0 0 1px; }
+.seat.pair-r { justify-self: start; margin-left: -1px; border-left: 0; border-radius: 0 3px 1px 0; }
+.seat.blocked.pair-l, .seat.blocked.pair-r { border-color: var(--line); }
+/* On a filled (sold or unavailable) pair the split is a dark line. */
+.seat.sold.pair-l, .seat.blocked.pair-l { border-right-color: var(--surface); }
 .seat.sold { background: var(--tgv); }
 .seat.blocked { background: var(--line); }
 .seat-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 12px; font-size: 10.5px; color: var(--muted); }
 .seat-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .seat-legend .seat { width: 10px; }
+.seat-legend .seat.twin {
+  width: 20px; aspect-ratio: 2 / 1; max-width: none; border: 1.5px solid var(--tgv);
+  background: linear-gradient(var(--tgv), var(--tgv)) center / 1px 100% no-repeat;
+}
 .seat-legend .seat-when { margin-left: auto; }
 
 /* -------------------------------------------------------------- corner rounding

@@ -28,11 +28,19 @@ export function seatGrid(plan) {
   const columns = Math.max(0, ...plan.rows.map((row) => row.seats.length));
   const rows = plan.rows.map((row) => {
     if (!row.seats.some(Boolean)) return el("div", { class: "seat-aisle", "aria-hidden": "true" });
+    // Twin seats side by side join into one box with a line between them (pair-l | pair-r).
+    const side = [];
+    row.seats.forEach((seat, i) => {
+      if (seat?.pair && !side[i] && row.seats[i + 1]?.pair) {
+        side[i] = " pair-l";
+        side[i + 1] = " pair-r";
+      }
+    });
     return [
       el("span", { class: "seat-row" }, row.label),
-      row.seats.map((seat) =>
+      row.seats.map((seat, i) =>
         seat
-          ? el("span", { class: `seat ${seat.state}${seat.pair ? " pair" : ""}`, title: `${seat.number} · ${STATE_LABEL[seat.state]}` })
+          ? el("span", { class: `seat ${seat.state}${seat.pair ? " pair" : ""}${side[i] || ""}`, title: `${seat.number} · ${STATE_LABEL[seat.state]}` })
           : el("span", { class: "seat-gap" }),
       ),
       el("span", { class: "seat-row" }, row.label),
@@ -182,7 +190,7 @@ export function enableSeatPreview(root, { selector, showFor, fetchPlan }) {
             el("span", {}, el("i", { class: "seat sold" }), "Sold"),
             el("span", {}, el("i", { class: "seat blocked" }), "Unavailable"),
             // Twin and sofa seats are sold in pairs; only shown when the hall has them.
-            plan.rows.some((row) => row.seats.some((seat) => seat?.pair)) ? el("span", {}, el("i", { class: "seat free pair" }), "Twin seat") : null,
+            plan.rows.some((row) => row.seats.some((seat) => seat?.pair)) ? el("span", {}, el("i", { class: "seat twin" }), "Twin seat") : null,
             el("span", { class: "seat-when" }, `Live from ${show.chain} · ${clock()}`),
           ),
         );
