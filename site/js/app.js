@@ -665,7 +665,7 @@ function movieCard(summary) {
   card.classList.remove("later");
   card.dataset.next = summary.nextDate;
   card.querySelector(".card-status").textContent = screeningLabel(summary.nextDate, todayMyt());
-  card.querySelector(".card-shows").textContent = plural(summary.showCount, "show");
+  card.querySelector(".card-shows").textContent = `${plural(summary.showCount, "show")} scheduled`;
   card.querySelector("h3").textContent = summary.title;
   card.querySelector(".card-meta").textContent = [runtime(summary.duration_mins), summary.rating, summary.language]
     .filter(Boolean)
