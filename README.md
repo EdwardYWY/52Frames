@@ -129,6 +129,7 @@ site/
 scripts/
   snapshot.mjs      builds data/showtimes.json (run by the Pages workflow)
   xml.mjs           tiny XML reader for Node (the snapshot script and tests)
+  bench-movie-view.mjs  times opening a movie, switching dates and closing it in Chromium
   js/providers.js   GSC + TGV fetch and parse (port of gsc.py / tgv.py); no DOM access
   js/aggregator.js  concurrency limit, sessionStorage cache, filter, group (port of aggregator.py)
   js/app.js         page code: grid, search, movie view, stars, location
@@ -204,3 +205,15 @@ The JavaScript tests check the same counts, fields, after-midnight handling and 
 normalisation as the Python tests, and `parity.test.mjs` runs the Python parsers on the same fixtures
 and compares the output field by field. Node has no `DOMParser`, so the tests pass a small XML reader
 (`tests/js/xml.mjs`) to the GSC parser.
+
+To time the movie view in a real browser (needs Playwright, which is not a project dependency),
+download a snapshot and run:
+
+```bash
+curl -o /tmp/showtimes.json https://edwardywy.github.io/52Frames/data/showtimes.json
+node scripts/bench-movie-view.mjs --snapshot /tmp/showtimes.json --cpu 4   # 4x slower CPU, like a phone
+```
+
+It prints the time until the next frame for each action, split into script, style and layout, and the
+functions that took longest (`--profile 0` skips the profiler for cleaner totals; `--group cinema`
+times the by-cinema layout).
