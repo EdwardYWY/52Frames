@@ -2,14 +2,14 @@
 // manage starred cinemas. Fetching and parsing live in providers.js; grouping and caching in
 // aggregator.js.
 
-import { collectShowtimes, createCache, filterShowtimes, summarizeMovies } from "./aggregator.js?v=4";
-import { REGIONS, distanceKm, normalizeTitle, todayMyt } from "./models.js?v=4";
-import { TGV_LOCATIONS } from "./places.js?v=4";
-import { createProviders, domParseXml } from "./providers.js?v=4";
-import { enhanceSelect } from "./select.js?v=4";
-import { collectCatalogue } from "./catalog.js?v=4";
-import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=4";
-import { loadSnapshot } from "./snapshot.js?v=4";
+import { collectShowtimes, createCache, filterShowtimes, summarizeMovies } from "./aggregator.js?v=6";
+import { REGIONS, movieGroupKey, distanceKm, normalizeTitle, todayMyt } from "./models.js?v=6";
+import { TGV_LOCATIONS } from "./places.js?v=6";
+import { createProviders, domParseXml } from "./providers.js?v=6";
+import { enhanceSelect } from "./select.js?v=6";
+import { collectCatalogue } from "./catalog.js?v=6";
+import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=6";
+import { loadSnapshot } from "./snapshot.js?v=6";
 
 const $ = (id) => document.getElementById(id);
 const providers = createProviders();
@@ -352,7 +352,7 @@ function posterFrame(summary, sizes) {
 const emptyKey = (date) => `${date}|${$("region").value}`;
 function renderDateStrip(strip, name, date) {
   const atCinema = matchesCinema($("cinema"));
-  const dates = [...new Set(state.main.shows.filter(s => s.movie_key === state.movieKey && atCinema(s)).map(s => s.business_date))].sort();
+  const dates = [...new Set(state.main.shows.filter(s => movieGroupKey(s) === state.movieKey && atCinema(s)).map(s => s.business_date))].sort();
   if (!dates.includes(date)) dates.push(date);
   dates.sort();
   strip.replaceChildren(...dates.map(iso => {
@@ -504,7 +504,7 @@ async function load(view = state.main) {
   const snap = await snapshotOnce();
   if (!current()) return;
   if (snap && view === state.sheet) {
-    const dates = [...new Set(snap.showtimes.filter(s => s.movie_key === state.movieKey && inScope(s.chain, s.region, chains) && matchesCinema($("cinema"))(s)).map(s => s.business_date))].sort();
+    const dates = [...new Set(snap.showtimes.filter(s => movieGroupKey(s) === state.movieKey && inScope(s.chain, s.region, chains) && matchesCinema($("cinema"))(s)).map(s => s.business_date))].sort();
     if (dates.length && !dates.includes(view.date)) view.date = dates[0];
   }
   if (snap && (view === state.main || snap.days.includes(view.date))) {
@@ -793,7 +793,7 @@ const HERO_SIZES = "500px";
 function renderSheet() {
   const key = state.movieKey;
   const view = state.sheet;
-  const all = view.shows.filter((s) => s.movie_key === key);
+  const all = view.shows.filter((s) => movieGroupKey(s) === key);
   const summary = summarizeMovies(all)[0] || state.lastSummary.get(key);
 
   if (sheetKey !== key) {
@@ -906,7 +906,7 @@ function route() {
   $("sheet").hidden = !key;
   document.body.classList.toggle("locked", Boolean(key) || !$("stars").hidden);
   if (opening) {
-    state.sheet.date = state.pendingSheetDate || [...new Set(state.main.shows.filter(s => s.movie_key === key && matchesCinema($("cinema"))(s)).map(s => s.business_date))].sort()[0] || todayMyt();
+    state.sheet.date = state.pendingSheetDate || [...new Set(state.main.shows.filter(s => movieGroupKey(s) === key && matchesCinema($("cinema"))(s)).map(s => s.business_date))].sort()[0] || todayMyt();
     state.pendingSheetDate = null;
     load(state.sheet);
     returnFocus = document.activeElement;
