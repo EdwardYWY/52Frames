@@ -84,6 +84,14 @@ export function summarizeMovies(showtimes) {
       cinemaCount: new Set(shows.map((s) => `${s.chain}|${s.cinema_name}`)).size,
       firstStart: shows[0].start,
       posters: posterCandidates(shows),
+      // Per chain: subtitles (null = not known) and the chain's page about the movie.
+      byChain: Object.fromEntries(
+        [...new Set(shows.map((s) => s.chain))].sort().map((chain) => {
+          const own = shows.filter((s) => s.chain === chain);
+          const known = own.find((s) => Array.isArray(s.subtitles) && s.subtitles.length) || own.find((s) => Array.isArray(s.subtitles));
+          return [chain, { subtitles: known ? known.subtitles : null, info_url: own.find((s) => s.info_url)?.info_url || "" }];
+        }),
+      ),
       shows,
     };
   });
@@ -91,16 +99,28 @@ export function summarizeMovies(showtimes) {
 
 // ---------------------------------------------------------------------------- cache
 
-/** A tiny TTL cache over Web Storage. Every storage access may throw (private mode, quota). */
+/**
+ * A TTL cache: in memory for this tab, backed by Web Storage so a reload is quick too.
+ * A region-day can be ~2 MB, so storage fills after a few days; then the oldest entries are
+ * dropped. The memory layer never fills, so switching back to a date is always instant.
+ * Every storage access may throw (private mode, quota), and is treated as a miss.
+ */
 export function createCache(storage, { ttlMs = CACHE_TTL_MS, now = () => Date.now() } = {}) {
   const store = storage ?? null;
+  const memory = new Map();
 
   function get(key) {
+    const hit = memory.get(key);
+    if (hit && now() - hit.t < ttlMs) return hit.v;
+    memory.delete(key);
     try {
       const raw = store?.getItem(CACHE_PREFIX + key);
       if (!raw) return undefined;
-      const { t, v } = JSON.parse(raw);
-      if (now() - t < ttlMs) return v;
+      const entry = JSON.parse(raw);
+      if (now() - entry.t < ttlMs) {
+        memory.set(key, entry);
+        return entry.v;
+      }
       store.removeItem(CACHE_PREFIX + key);
     } catch {
       // Unreadable or corrupt entry: treat as a miss.
@@ -108,18 +128,51 @@ export function createCache(storage, { ttlMs = CACHE_TTL_MS, now = () => Date.no
     return undefined;
   }
 
-  function set(key, value) {
+  function write(key, raw) {
     try {
-      store?.setItem(CACHE_PREFIX + key, JSON.stringify({ t: now(), v: value }));
+      store?.setItem(CACHE_PREFIX + key, raw);
+      return true;
     } catch {
-      // Quota exceeded: drop expired entries and try once more, else give up quietly.
-      prune();
+      return false;
+    }
+  }
+
+  function set(key, value) {
+    const entry = { t: now(), v: value };
+    memory.set(key, entry);
+    const raw = JSON.stringify(entry);
+    if (write(key, raw)) return;
+    // Full: drop expired entries, then the oldest ones, until it fits (or nothing is left).
+    prune();
+    for (const old of entriesOldestFirst()) {
+      if (write(key, raw)) return;
       try {
-        store?.setItem(CACHE_PREFIX + key, JSON.stringify({ t: now(), v: value }));
+        store.removeItem(old);
       } catch {
-        /* not cached */
+        return;
       }
     }
+    write(key, raw);
+  }
+
+  function entriesOldestFirst() {
+    const found = [];
+    try {
+      for (let i = 0; i < store.length; i++) {
+        const key = store.key(i);
+        if (!key?.startsWith(CACHE_PREFIX)) continue;
+        let t = 0;
+        try {
+          t = JSON.parse(store.getItem(key)).t;
+        } catch {
+          /* corrupt: oldest */
+        }
+        found.push([t, key]);
+      }
+    } catch {
+      /* storage unavailable */
+    }
+    return found.sort((a, b) => a[0] - b[0]).map(([, key]) => key);
   }
 
   function prune() {

@@ -1,4 +1,4 @@
-// A minimal XML reader for the Node tests: just enough DOM (getElementsByTagName,
+// A minimal XML reader for Node (tests and the snapshot script): just enough DOM (getElementsByTagName,
 // getAttribute) for parseGscShowtimes, since Node has no DOMParser.
 
 const ENTITIES = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };

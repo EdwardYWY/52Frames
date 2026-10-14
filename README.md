@@ -62,13 +62,21 @@ longer than one region (about 10 s for Klang Valley).
 <https://edwardywy.github.io/52Frames/> is a static page in [`site/`](site/): plain ES modules, no
 build step, no dependencies.
 
-- **Now showing**: a poster grid of every movie in the chosen region and day. Dropdowns for date,
-  region, cinema (including **★ Starred**) and sort; GSC/TGV toggles.
-- **Movie view** (tap a poster; the back button or Esc returns to the grid): a date strip, the
+- **Now showing**: a poster grid of every movie in the chosen region and day. A 7-day date strip
+  (today + 6), dropdowns for region, cinema (including **★ Starred**) and sort; GSC/TGV toggles.
+  Days that load fine but have no shows are marked "Soon": Malaysian cinemas publish the next
+  week's showtimes on Wednesdays.
+- **Movie view** (tap a poster; the back button or Esc returns to the grid): a pinned header with
+  the back button, title and date strip, the
   schedule **by cinema** (collapsed rows with the next times; starred cinemas always first; sort by
   earliest show, nearest, name or most shows) or **by time** (one list of every show), plus cinema
   and start-time dropdowns. Each time links to the chain's booking page, where seats are chosen.
   Sold-out times are struck through, started ones dimmed, after-midnight ones marked `+1`.
+- **Subtitles** per chain ("Subtitles (GSC)", "Subtitles (TGV)") with a link to each chain's page
+  about the movie; they often differ. TGV lists them in its sessions data. GSC only shows them on
+  its public movie pages, so the snapshot job reads those (one page per movie per run; titles are
+  matched to GSC's page links by their letters and digits). Pages that don't say show
+  "Not listed"; the live fallback has TGV's only.
 - **Posters** come from both chains; when both have one, the higher-resolution one is used where
   it matters (GSC's 500 px poster in the movie view) and the browser picks a lighter one for the grid.
 - **Location** (optional, top bar): shows the distance to each cinema and enables "Nearest". GSC
@@ -82,14 +90,20 @@ sit behind each chain's booking session.
 
 How it works:
 
-1. The browser loads the cinema lists of both chains and keeps the ones in the chosen region.
-2. It fetches each cinema's showtimes for the day, at most 6 requests at a time, and draws results
-   as they arrive ("Loaded 23/51 cinemas").
-3. If a chain or cinema fails, the page says so and shows the rest.
-4. Responses are cached in `sessionStorage` for 10 minutes per date and cinema, so switching
-   filters or reloading doesn't hit the chains again.
+1. **Shared snapshot (normal case).** Every 6 hours a GitHub Action (`scripts/snapshot.mjs`) fetches
+   every GSC and TGV cinema in Malaysia for today + 6 days (~714 calls, ~2 minutes, 4 at a time) and
+   publishes one compact file, `data/showtimes.json` (~450 KB, ~100 KB compressed). The page
+   downloads that one file; switching dates and regions after that needs no requests at all, and
+   **visitors make no calls to GSC or TGV**, so the load on the chains is the same (~2,900 calls
+   a day) however many people use the site. A push to `main` reuses the published snapshot instead
+   of fetching again.
+2. **Live fallback.** If the snapshot is missing, older than 13 hours, or doesn't have the chosen
+   day, the browser fetches that day itself: both cinema lists, then each cinema in the region, at
+   most 6 at a time, drawing results as they arrive ("Loaded 23/51 cinemas"). If a chain or cinema
+   fails, the page says so and shows the rest. Live results are cached for 10 minutes, in memory
+   and in `sessionStorage` (oldest entries dropped when it fills up).
 
-This works because both APIs send CORS headers: GSC allows the `edwardywy.github.io` origin, TGV
+The live fallback works because both APIs send CORS headers: GSC allows the `edwardywy.github.io` origin, TGV
 allows any origin. No other endpoints are used.
 
 ```
@@ -98,13 +112,19 @@ site/
   css/style.css
   js/models.js      normalizeTitle, showtime shape, distance (port of models.py)
   js/places.js      TGV cinema coordinates
+  js/snapshot.js    the shared snapshot: pack / unpack / load
+scripts/
+  snapshot.mjs      builds data/showtimes.json (run by the Pages workflow)
+  xml.mjs           tiny XML reader for Node (the snapshot script and tests)
   js/providers.js   GSC + TGV fetch and parse (port of gsc.py / tgv.py); no DOM access
   js/aggregator.js  concurrency limit, sessionStorage cache, filter, group (port of aggregator.py)
   js/app.js         page code: grid, movie view, stars, location
 ```
 
 `.github/workflows/pages.yml` runs the Python and JavaScript tests on every push and pull request,
-and deploys `site/` to Pages on pushes to `main`. In the repository settings, **Settings → Pages →
+deploys `site/` to Pages on pushes to `main`, and rebuilds the snapshot every 6 hours
+(00:17, 06:17, 12:17, 18:17 UTC = 08:17, 14:17, 20:17, 02:17 in Malaysia). To refresh it by hand:
+Actions → "Deploy site to GitHub Pages" → Run workflow. In the repository settings, **Settings → Pages →
 Source** must be **GitHub Actions**.
 
 ## Local web page

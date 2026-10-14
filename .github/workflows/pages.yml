@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Refresh the shared showtimes snapshot every 6 hours (00:17, 06:17, 12:17, 18:17 UTC,
+  # i.e. 08:17, 14:17, 20:17, 02:17 in Malaysia). Off the hour, since :00 runs are often delayed.
+  schedule:
+    - cron: "17 */6 * * *"
   workflow_dispatch:
 
 permissions:
@@ -40,9 +44,22 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Copy the site
+        run: cp -r site _site
+      - name: Showtimes snapshot (fetch on schedule; reuse the published one on a code push)
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            node scripts/snapshot.mjs --out _site/data/showtimes.json \
+              --reuse https://edwardywy.github.io/52Frames/data/showtimes.json
+          else
+            node scripts/snapshot.mjs --out _site/data/showtimes.json
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

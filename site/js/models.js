@@ -43,6 +43,8 @@ export function makeShowtime(fields) {
     booking_url: "",
     poster_url: "",
     poster_small_url: "",
+    subtitles: null, // ["BM", "Chinese", ...]; null when unknown
+    info_url: "", // the chain's page about the movie
     latitude: null,
     longitude: null,
     movie_key: "",
@@ -89,4 +91,28 @@ export function distanceKm(a, b) {
   const dLng = rad(b.longitude - a.longitude);
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLng / 2) ** 2;
   return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+// Both chains name subtitle languages differently ("Bahasa Melayu" vs "BM", "Chinese" vs "CHI").
+const SUBTITLE_NAMES = {
+  bm: "BM",
+  "bahasa melayu": "BM",
+  malay: "BM",
+  chi: "Chinese",
+  chinese: "Chinese",
+  eng: "English",
+  english: "English",
+  tam: "Tamil",
+  tamil: "Tamil",
+};
+
+export function normalizeSubtitles(names) {
+  const out = [];
+  for (const raw of names || []) {
+    const name = String(raw).trim();
+    if (!name || ["-", "NA", "N/A"].includes(name)) continue;
+    const label = SUBTITLE_NAMES[name.toLowerCase()] ?? name;
+    if (!out.includes(label)) out.push(label);
+  }
+  return out;
 }

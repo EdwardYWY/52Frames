@@ -218,8 +218,9 @@ test("a broken storage never breaks loading", async () => {
     },
   );
   const cache = createCache(throwing);
-  cache.set("k", 1);
-  assert.equal(cache.get("k"), undefined);
+  cache.set("k", 1); // must not throw
+  assert.equal(cache.get("k"), 1, "still cached in memory for this tab");
+  assert.equal(cache.get("missing"), undefined);
   cache.prune();
 });
 
@@ -277,4 +278,36 @@ test("every TGV location is inside Malaysia and not a copy of another", async ()
     assert.ok(lat > 0.8 && lat < 7.5 && lng > 99.5 && lng < 119.5, `${lat},${lng}`);
   }
   assert.equal(new Set(points.map(String)).size, points.length);
+});
+
+test("a full storage keeps working: memory serves repeats, oldest stored entries make room", () => {
+  let clock = 0;
+  const store = new MemoryStorage();
+  const limit = 3; // entries
+  const small = {
+    get length() {
+      return store.length;
+    },
+    key: (i) => store.key(i),
+    getItem: (k) => store.getItem(k),
+    removeItem: (k) => store.removeItem(k),
+    setItem(k, v) {
+      if (!store.map.has(k) && store.length >= limit) throw new Error("QuotaExceededError");
+      store.setItem(k, v);
+    },
+  };
+  const cache = createCache(small, { ttlMs: 1000, now: () => clock });
+  for (const day of ["d1", "d2", "d3", "d4", "d5"]) {
+    clock++;
+    cache.set(day, day.toUpperCase());
+  }
+  // Every day is still served (memory), and storage holds the newest three.
+  assert.deepEqual(["d1", "d2", "d3", "d4", "d5"].map((d) => cache.get(d)), ["D1", "D2", "D3", "D4", "D5"]);
+  assert.equal(store.length, 3);
+  assert.ok(store.getItem("showtimes:v3:d5"));
+  assert.equal(store.getItem("showtimes:v3:d1"), null);
+  // A fresh tab (no memory) still finds what storage kept.
+  const reloaded = createCache(small, { ttlMs: 1000, now: () => clock });
+  assert.equal(reloaded.get("d5"), "D5");
+  assert.equal(reloaded.get("d1"), undefined);
 });

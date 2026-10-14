@@ -10,7 +10,7 @@ import {
   parseTgvCinemas,
   parseTgvShowtimes,
 } from "../../site/js/providers.js";
-import { parseXml } from "./xml.mjs";
+import { parseXml } from "../../scripts/xml.mjs";
 
 const fixture = (name) => readFileSync(new URL(`../fixtures/${name}`, import.meta.url), "utf8");
 const json = (name) => JSON.parse(fixture(name));
@@ -168,4 +168,29 @@ test("an HTTP error is reported, not parsed", async () => {
     parseXml,
   });
   await assert.rejects(providers.TGV.fetchCinemas(), /HTTP 503/);
+});
+
+test("GSC movie pages: slugs, title matching and subtitles", async () => {
+  const { gscMovieSlugs, findGscSlug, parseGscSubtitles } = await import("../../site/js/providers.js");
+  const slugs = gscMovieSlugs(fixture("gsc_home_links.html"));
+  assert.ok(slugs.includes("rerun-la-la-land") && slugs.includes("digger"));
+  assert.equal(findGscSlug("(RERUN) La La Land", slugs), "rerun-la-la-land");
+  assert.equal(findGscSlug("(InfinityVision) Avengers:Endgame Encore", slugs), "infinityvision-avengersendgame-encore");
+  assert.equal(findGscSlug("Spider-Man: Brand New Day ", slugs), "spiderman-brand-new-day");
+  assert.equal(
+    findGscSlug("Chiikawa the Movie: The Secret of the Mermaid Island", slugs),
+    "chiikawa-the-movie-the-secret-of-the-mermaid-isla",
+    "GSC cuts slugs at 50 characters",
+  );
+  assert.equal(findGscSlug("A Movie GSC Does Not List", slugs), null);
+  assert.deepEqual(parseGscSubtitles(fixture("gsc_movie_rerun-la-la-land.html")), ["BM"]);
+  assert.deepEqual(parseGscSubtitles('<span class="spec-label">Subtitles</span> <span class="spec-value">: BM / CHI / ENG</span>'), ["BM", "Chinese", "English"]);
+  assert.equal(parseGscSubtitles("<p>no spec rows</p>"), null);
+});
+
+test("TGV: subtitles and the movie page link", () => {
+  const mommy = tgvShows().find((s) => s.movie_title === "Other Mommy");
+  assert.deepEqual(mommy.subtitles, ["BM", "Chinese"]);
+  assert.equal(mommy.info_url, "https://www.tgv.com.my/movie/other-mommy");
+  assert.deepEqual(tgvShows().find((s) => s.movie_title === "Digger").subtitles, [], "empty list = none listed");
 });

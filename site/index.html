@@ -38,7 +38,10 @@
   </section>
 
   <form class="toolbar" id="toolbar" autocomplete="off">
-    <label class="field"><span class="label">Date</span><span class="select"><select id="date"></select></span></label>
+    <fieldset class="field field-dates">
+      <legend class="label">Date</legend>
+      <div class="date-strip" id="dates" role="radiogroup" aria-label="Date"></div>
+    </fieldset>
     <label class="field"><span class="label">Region</span>
       <span class="select"><select id="region">
         <option>Klang Valley</option><option>Northern</option><option>Southern</option>
@@ -102,20 +105,21 @@
 <div class="sheet" id="sheet" hidden>
   <div class="sheet-backdrop" data-close></div>
   <article class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="m-title">
-    <button class="close" type="button" data-close aria-label="Back to all movies">
-      <span aria-hidden="true">←</span><span class="close-text">All movies</span>
-    </button>
+    <header class="m-head">
+      <div class="m-head-row">
+        <button class="close" type="button" data-close aria-label="Back to all movies">
+          <span aria-hidden="true">←</span><span class="close-text">All movies</span>
+        </button>
+        <h2 id="m-title"></h2>
+      </div>
+      <div class="date-strip" id="m-dates" role="radiogroup" aria-label="Date"></div>
+    </header>
     <aside class="m-side">
       <div class="m-poster" id="m-poster"></div>
       <dl class="m-facts" id="m-facts"></dl>
     </aside>
     <div class="m-main">
-      <h2 id="m-title"></h2>
-
-      <div class="sec-head"><span class="sec-no">01</span><h3>Date</h3><span class="sec-rule"></span></div>
-      <div class="date-strip" id="m-dates" role="radiogroup" aria-label="Date"></div>
-
-      <div class="sec-head"><span class="sec-no">02</span><h3>Schedule</h3><span class="sec-rule"></span>
+      <div class="sec-head"><span class="sec-no">01</span><h3>Schedule</h3><span class="sec-rule"></span>
         <span class="mono" id="m-count"></span></div>
       <div class="m-controls">
         <div class="seg" role="radiogroup" aria-label="Group by">
