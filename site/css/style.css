@@ -186,6 +186,10 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
 .seg input:focus-visible + span,
 .day input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* Filters: on desktop the wrapper doesn't affect layout; on phones it folds behind a button. */
+.filters { display: contents; }
+.filters-toggle { display: none; }
+
 /* Search */
 .field-search { flex: 1 1 100%; }
 .search-box { position: relative; display: block; }
@@ -518,6 +522,19 @@ a.trow:hover .trow-what, a.trow:hover .trow-go { color: var(--accent); }
 }
 
 @media (max-width: 560px) {
+  /* Phones: dates stay visible; the five filters fold behind one button that says what's set. */
+  .filters-toggle {
+    display: flex; align-items: center; gap: 10px; flex: 1 1 100%; height: 44px; padding: 0 12px; margin: 0;
+    font: 15px var(--f-body); color: var(--ink); text-align: left; cursor: pointer;
+    background: var(--bg); border: 1px solid var(--line); border-bottom: 2px solid var(--ink-2); border-radius: 0;
+  }
+  .filters-toggle[aria-expanded="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .filters-title { font: 700 14px/1 var(--f-display); letter-spacing: 0.1em; text-transform: uppercase; flex: none; }
+  .filters-summary { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 13px; }
+  .filters-toggle .chev { flex: none; }
+  .filters-toggle[aria-expanded="true"] .chev { transform: rotate(-135deg); margin-top: 4px; }
+  .filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; flex: 1 1 100%; }
+  .filters:not(.open) { display: none; }
   /* Keep the pinned movie header short so it never crowds the schedule. */
   .m-head .close { width: 36px; padding: 0; justify-content: center; }
   .m-head .close-text { display: none; }

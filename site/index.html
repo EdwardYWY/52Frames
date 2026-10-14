@@ -42,32 +42,38 @@
       <legend class="label">Date</legend>
       <div class="date-strip" id="dates" role="radiogroup" aria-label="Date"></div>
     </fieldset>
-    <label class="field field-search">
-      <span class="label">Search movies</span>
-      <span class="search-box">
-        <input type="search" id="q" placeholder="Movie title" enterkeyhint="search" spellcheck="false">
-        <kbd class="search-key mono" aria-hidden="true">/</kbd>
-      </span>
-    </label>
-    <label class="field"><span class="label">Region</span>
-      <span class="select"><select id="region">
-        <option>Klang Valley</option><option>Northern</option><option>Southern</option>
-        <option>East Coast</option><option>East Malaysia</option><option value="">All Malaysia</option>
-      </select></span>
-    </label>
-    <label class="field field-wide"><span class="label">Cinema</span><span class="select"><select id="cinema" multiple></select></span></label>
-    <label class="field"><span class="label">Sort</span>
-      <span class="select"><select id="sort">
-        <option value="shows">Most shows</option><option value="title">Title A–Z</option><option value="time">Earliest show</option>
-      </select></span>
-    </label>
-    <fieldset class="field chains">
-      <legend class="label">Chain</legend>
-      <div class="toggles">
-        <label class="toggle gsc"><input type="checkbox" name="chain" value="GSC" checked><span>GSC</span></label>
-        <label class="toggle tgv"><input type="checkbox" name="chain" value="TGV" checked><span>TGV</span></label>
-      </div>
-    </fieldset>
+    <button type="button" class="filters-toggle" id="filters-toggle" aria-expanded="false" aria-controls="filters">
+      <span class="filters-title">Filters</span><span class="filters-summary" id="filters-summary"></span>
+      <span class="chev" aria-hidden="true"></span>
+    </button>
+    <div class="filters" id="filters">
+      <label class="field field-search">
+        <span class="label">Search movies</span>
+        <span class="search-box">
+          <input type="search" id="q" placeholder="Movie title" enterkeyhint="search" spellcheck="false">
+          <kbd class="search-key mono" aria-hidden="true">/</kbd>
+        </span>
+      </label>
+      <label class="field"><span class="label">Region</span>
+        <span class="select"><select id="region">
+          <option>Klang Valley</option><option>Northern</option><option>Southern</option>
+          <option>East Coast</option><option>East Malaysia</option><option value="">All Malaysia</option>
+        </select></span>
+      </label>
+      <label class="field field-wide"><span class="label">Cinema</span><span class="select"><select id="cinema" multiple></select></span></label>
+      <label class="field"><span class="label">Sort</span>
+        <span class="select"><select id="sort">
+          <option value="shows">Most shows</option><option value="title">Title A–Z</option><option value="time">Earliest show</option>
+        </select></span>
+      </label>
+      <fieldset class="field chains">
+        <legend class="label">Chain</legend>
+        <div class="toggles">
+          <label class="toggle gsc"><input type="checkbox" name="chain" value="GSC" checked><span>GSC</span></label>
+          <label class="toggle tgv"><input type="checkbox" name="chain" value="TGV" checked><span>TGV</span></label>
+        </div>
+      </fieldset>
+    </div>
   </form>
 
   <div class="status" role="status" aria-live="polite">

@@ -968,8 +968,25 @@ function closeSheet() {
 
 const dropdowns = [];
 
+/** What the folded filter button says on phones: only what differs from the defaults. */
+function renderFilterSummary() {
+  const parts = [regionLabel()];
+  if (chosenCinemas($("cinema")).length) parts.push(cinemaSummary($("cinema")));
+  if ($("sort").value !== "shows") parts.push($("sort").selectedOptions[0].text);
+  const chains = selectedChains();
+  if (chains.length !== 2) parts.push(chains.length ? `${chains[0]} only` : "No chain");
+  if (searchText()) parts.push(`“${searchText()}”`);
+  $("filters-summary").textContent = parts.join(" · ");
+}
+
+function toggleFilters(open = !$("filters").classList.contains("open")) {
+  $("filters").classList.toggle("open", open);
+  $("filters-toggle").setAttribute("aria-expanded", String(open));
+}
+
 function render() {
   renderTools();
+  renderFilterSummary();
   renderStatus();
   renderGrid();
   if (state.movieKey) renderSheet();
@@ -1009,6 +1026,7 @@ async function init() {
   for (const id of ["cinema", "m-cinema"]) $(id).addEventListener("change", (e) => tidyCinemaChoice(e.target));
   for (const id of ["cinema", "sort"]) $(id).addEventListener("change", render);
   $("q").addEventListener("input", render);
+  $("filters-toggle").addEventListener("click", () => toggleFilters());
   $("q").addEventListener("keydown", (e) => {
     if (e.key === "Escape" && $("q").value) {
       e.stopPropagation();
@@ -1051,6 +1069,7 @@ async function init() {
     // "/" jumps to the search box (unless typing somewhere already).
     if (e.key === "/" && !state.movieKey && $("stars").hidden && !/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName)) {
       e.preventDefault();
+      toggleFilters(true);
       $("q").focus();
       return;
     }
