@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Build the shared snapshot (site/js/snapshot.js): every GSC and TGV cinema, today + 6 days,
+// Build the shared snapshot: GSC and TGV movies across all published booking dates,
 // in one compact file. Run by .github/workflows/pages.yml every 6 hours.
 //
-//   node scripts/snapshot.mjs --out _site/data/showtimes.json [--days 7]
+//   node scripts/snapshot.mjs --out _site/data/showtimes.json
 //   node scripts/snapshot.mjs --out ... --reuse https://edwardywy.github.io/52Frames/data/showtimes.json
 //
 // --reuse copies the published snapshot instead of fetching (used when a push redeploys the site,
@@ -11,17 +11,17 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
-import { collectShowtimes, createCache, mapLimit } from "../site/js/aggregator.js";
-import { addDays, todayMyt } from "../site/js/models.js";
-import { GSC, createProviders, findGscSlug, gscMovieSlugs, parseGscSubtitles } from "../site/js/providers.js";
+import { mapLimit } from "../site/js/aggregator.js";
+import { todayMyt } from "../site/js/models.js";
+import { GSC, findGscSlug, gscMovieSlugs, parseGscSubtitles } from "../site/js/providers.js";
 import { SNAPSHOT_MAX_AGE_MS, decodeSnapshot, encodeSnapshot } from "../site/js/snapshot.js";
 import { parseXml } from "./xml.mjs";
+import { collectCatalogue } from "../site/js/catalog.js";
 
 const args = Object.fromEntries(
   process.argv.slice(2).reduce((pairs, arg, i, all) => (arg.startsWith("--") ? [...pairs, [arg.slice(2), all[i + 1]]] : pairs), []),
 );
 const out = args.out || "_site/data/showtimes.json";
-const dayCount = Number(args.days || 7);
 const CONCURRENCY = 4; // gentler than the browser's 6; nobody is waiting on this
 
 const USER_AGENT = "Mozilla/5.0 (compatible; 52frames-showtimes/1.0; +https://edwardywy.github.io/52Frames/)";
@@ -92,21 +92,12 @@ async function addGscMovieInfo(days) {
 }
 
 async function build() {
-  const providers = createProviders({ fetch: politeFetch, parseXml });
-  const cache = createCache(null); // memory only: the cinema lists are fetched once per run
-  const today = todayMyt();
-  const days = [];
-  for (let i = 0; i < dayCount; i++) {
-    const date = addDays(today, i);
-    const started = Date.now();
-    const result = await collectShowtimes(date, { providers, cache, concurrency: CONCURRENCY });
-    console.log(
-      `${date}: ${result.showtimes.length} shows, ${result.cinemas.length} cinemas, ` +
-        `${result.errors.length} errors, ${((Date.now() - started) / 1000).toFixed(1)} s`,
-    );
-    for (const e of result.errors) console.log(`  ! ${e}`);
-    days.push({ date, ...result });
-  }
+  const result = await collectCatalogue({ fetch: politeFetch, parseXml, concurrency: CONCURRENCY,
+    onProgress: ({ done, total }) => { if (done % 50 === 0) console.log(`Catalogue: ${done}/${total}`); } });
+  // A failed refresh must not publish an incomplete catalogue over the good one.
+  if (result.errors.length) throw new Error(result.errors.join('\n'));
+  const dates = [...new Set([todayMyt(), ...result.showtimes.map(s => s.business_date)])].sort();
+  const days = dates.map(date => ({ date, cinemas: result.cinemas, errors: [], showtimes: result.showtimes.filter(s => s.business_date === date) }));
   await addGscMovieInfo(days);
   const total = days.reduce((n, d) => n + d.showtimes.length, 0);
   // Every cinema failing (e.g. an API change) must not replace a good snapshot with an empty one.

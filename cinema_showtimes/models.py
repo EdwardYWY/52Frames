@@ -93,6 +93,8 @@ class Showtime:
     duration_mins: int | None = None
     rating: str = ""
     language: str = ""
+    genres: tuple[str, ...] = ()
+    tags: tuple[str, ...] = ()
     sold_out: bool = False
     booking_url: str = ""
     # Largest poster this chain offers, and a smaller one if it has one.

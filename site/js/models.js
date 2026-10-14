@@ -39,6 +39,8 @@ export function makeShowtime(fields) {
     duration_mins: null,
     rating: "",
     language: "",
+    genres: [],
+    tags: [],
     sold_out: false,
     booking_url: "",
     poster_url: "",

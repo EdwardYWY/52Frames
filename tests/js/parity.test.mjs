@@ -51,7 +51,7 @@ print(json.dumps({
 }))
 `;
   try {
-    return JSON.parse(execFileSync("python3", ["-c", script, JSON.stringify(TITLES)], { cwd: root }));
+    return JSON.parse(execFileSync(process.platform === "win32" ? "python" : "python3", ["-c", script, JSON.stringify(TITLES)], { cwd: root }));
   } catch (err) {
     if (err.code === "ENOENT") return null;
     throw err;

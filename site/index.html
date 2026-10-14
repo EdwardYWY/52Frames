@@ -7,8 +7,8 @@
 <meta name="description" content="GSC and TGV showtimes across Malaysia, on one page.">
 <title>52 Frames · Showtimes</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2316171a'/%3E%3Cpath d='M6 6h14l6 6v14H6z' fill='%23ffd200'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/style.css">
-<script type="module" src="js/app.js"></script>
+<link rel="stylesheet" href="css/style.css?v=3">
+<script type="module" src="js/app.js?v=3"></script>
 </head>
 <body>
 
@@ -31,17 +31,13 @@
 <main class="page" id="list">
   <section class="intro">
     <div class="intro-row">
-      <h1>Now showing</h1>
+      <h1>Movies</h1>
       <span class="mono intro-count" id="count"></span>
     </div>
     <div class="intro-rule" aria-hidden="true"><span class="hazard"></span><span class="mono" id="intro-date"></span></div>
   </section>
 
   <form class="toolbar" id="toolbar" autocomplete="off" role="search">
-    <fieldset class="field field-dates">
-      <legend class="label">Date</legend>
-      <div class="date-strip" id="dates" role="radiogroup" aria-label="Date"></div>
-    </fieldset>
     <button type="button" class="filters-toggle" id="filters-toggle" aria-expanded="false" aria-controls="filters">
       <span class="filters-title">Filters</span><span class="filters-summary" id="filters-summary"></span>
       <span class="chev" aria-hidden="true"></span>
@@ -66,6 +62,7 @@
           <option value="shows">Most shows</option><option value="title">Title A–Z</option><option value="time">Earliest show</option>
         </select></span>
       </label>
+      <label class="field concert-filter"><span class="label">Content</span><span class="concert-choice"><input type="checkbox" id="hide-concerts" checked> Hide concerts</span></label>
       <fieldset class="field chains">
         <legend class="label">Chain</legend>
         <div class="toggles">
@@ -88,7 +85,7 @@
     <p>Times are Malaysia time. Tap a time to book on the chain's own site; seats are chosen there.
       ☆ a cinema to keep it at the top; stars and your location stay in this browser only.
       Struck-through times are sold out; <b class="mono">+1</b> marks shows after midnight.</p>
-    <p>Data comes straight from GSC and TGV's public website endpoints, called from your browser.
+    <p>Data comes straight from GSC and TGV's public website endpoints, refreshed in a shared snapshot.
       Unofficial and unaffiliated.</p>
   </footer>
 </main>

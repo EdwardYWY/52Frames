@@ -4,7 +4,7 @@
 // Nothing here touches the page. Network and XML parsing are injectable so Node tests can
 // run the parsers against tests/fixtures/ without a browser.
 
-import { floatOrNull, intOrNull, makeShowtime, normalizeSubtitles } from "./models.js";
+import { floatOrNull, intOrNull, makeShowtime, normalizeSubtitles } from "./models.js?v=3";
 
 // ---------------------------------------------------------------------------- GSC
 
@@ -94,6 +94,7 @@ export function parseGscShowtimes(xmlText, cinema, parseXml = domParseXml) {
               duration_mins: intOrNull(attr(child, "duration")),
               rating: attr(child, "rating"),
               language: attr(child, "lang"),
+              genres: attr(child, "genre") ? [attr(child, "genre")] : [],
               sold_out: attr(show, "hallfull") === "1",
               booking_url: bookingUrl,
               poster_url: attr(child, "thumb_big"),
@@ -264,6 +265,8 @@ export function parseTgvShowtimes(payload, cinema) {
               duration_mins: intOrNull(movieinfo.runtimemins),
               rating: String(movieinfo.rating || ""),
               language: movieinfo.lang || "",
+              genres: movieinfo.genre || [],
+              tags: Array.isArray(info.extdata?.tags) ? info.extdata.tags : info.extdata?.tags ? [info.extdata.tags] : [],
               booking_url: bookingUrl,
               poster_url: posterUrl,
               subtitles,

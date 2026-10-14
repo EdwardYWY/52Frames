@@ -62,14 +62,15 @@ longer than one region (about 10 s for Klang Valley).
 <https://edwardywy.github.io/52Frames/> is a static page in [`site/`](site/): plain ES modules, no
 build step, no dependencies.
 
-- **Now showing**: a poster grid of every movie in the chosen region and day. A search box (title in
-  any language either chain uses; `/` focuses it) that also lists matches showing later this week,
-  greyed with their next day. A 7-day date strip (today + 6), dropdowns for region, cinemas (pick
-  any number, or **★ Starred**) and sort; GSC/TGV toggles.
-  Days that load fine but have no shows are marked "Soon": Malaysian cinemas publish the next
-  week's showtimes on Wednesdays.
+- **Movies**: a poster grid across all published booking dates, including advance sales.
+  Search by title (`/` focuses search), filter by region, cinemas and chain. Concerts are hidden
+  by default; the Content checkbox includes them and remembers the choice. Musicals stay visible.
+  Posters have no count overlay or corner decoration; status below each poster says "Showing now"
+  or "Next screening" using the booking business date.
+  Sort labels remain Most shows, Title A–Z and Earliest show. Earliest show orders today's movies
+  A–Z, then future movies by booking date with A–Z ties. Most shows counts all published sessions.
 - **Movie view** (tap a poster; the back button or Esc returns to the grid): a pinned header with
-  the back button, title and its own date strip (changing it leaves the main page's date alone).
+  the back button, title and only that movie's available booking dates (including month labels).
   The schedule shows **by time** (the default; the last choice is remembered) or **by cinema**
   (collapsed rows with the next times; starred cinemas first, with a star pattern; sort by earliest
   show, nearest, name or most shows), with cinema (several at once, or ★ Starred) and start-time
@@ -93,21 +94,20 @@ sit behind each chain's booking session.
 
 How it works:
 
-1. **Shared snapshot (normal case).** Every 6 hours a GitHub Action (`scripts/snapshot.mjs`) fetches
-   every GSC and TGV cinema in Malaysia for today + 6 days (~714 calls, ~2 minutes, 4 at a time) and
-   publishes one compact file, `data/showtimes.json` (~450 KB, ~100 KB compressed). The page
-   downloads that one file; switching dates and regions after that needs no requests at all, and
-   **visitors make no calls to GSC or TGV**, so the load on the chains is the same (~2,900 calls
-   a day) however many people use the site. A push to `main` reuses the published snapshot instead
-   of fetching again.
-2. **Live fallback.** If the snapshot is missing, older than 13 hours, or doesn't have the chosen
-   day, the browser fetches that day itself: both cinema lists, then each cinema in the region, at
-   most 6 at a time, drawing results as they arrive ("Loaded 23/51 cinemas"). If a chain or cinema
-   fails, the page says so and shows the rest. Live results are cached for 10 minutes, in memory
-   and in `sessionStorage` (oldest entries dropped when it fills up).
+1. **Shared snapshot (normal case).** Every 6 hours a GitHub Action (`scripts/snapshot.mjs`)
+   discovers movies and available booking dates from both chains, including advance sales.
+   GSC sessions are fetched per movie/date; TGV movie dates identify cinema/date pairs, fetched
+   once each. Four requests run at a time. Genres and tags are retained in snapshot version 3.
+   One compact `data/showtimes.json` serves all visitors; date and region changes need no requests.
+   Pushes reuse a compatible, fresh snapshot. A schema change fetches a new one automatically.
+   Failed catalogue refreshes do not replace a good snapshot with incomplete data.
 
-The live fallback works because both APIs send CORS headers: GSC allows the `edwardywy.github.io` origin, TGV
-allows any origin. No other endpoints are used.
+2. **Live fallback.** If the snapshot is missing or older than 13 hours, the movie list
+   discovers the catalogue live for the selected region and chains. Movie details reuse those
+   sessions; a date missing from the snapshot can still load per cinema/date. Failures are shown
+   while the remaining results stay available. Session requests are cached for 10 minutes.
+
+The browser fallback uses the chains' public website endpoints and requires their CORS headers.
 
 ```
 site/

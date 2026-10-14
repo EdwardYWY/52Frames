@@ -8,3 +8,4 @@ venv/
 # Built by scripts/snapshot.mjs in the Pages workflow
 site/data/
 _site/
+.tmp/

@@ -79,6 +79,7 @@ def parse_showtimes(xml_text: str, cinema: Cinema) -> list[Showtime]:
                             duration_mins=_int_or_none(child.get("duration")),
                             rating=child.get("rating", ""),
                             language=child.get("lang", ""),
+                            genres=(child.get("genre"),) if child.get("genre") else (),
                             sold_out=show.get("hallfull") == "1",
                             booking_url=booking_url,
                             poster_url=child.get("thumb_big", ""),
