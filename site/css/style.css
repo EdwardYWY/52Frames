@@ -258,11 +258,25 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
   background: var(--surface); border: 1px solid var(--line-strong); overscroll-behavior: contain;
   box-shadow: 0 24px 60px rgb(0 0 0 / 0.35);
 }
-.sheet-panel::before {
+.stars-sheet .sheet-panel::before {
   /* Top rule: ink with a yellow lead-in. */
   content: ""; position: sticky; top: 0; grid-column: 1 / -1; height: 4px; z-index: 2;
   background: linear-gradient(90deg, var(--accent) 0 96px, var(--ink) 96px);
 }
+
+/* Movie header: back, title and dates stay pinned while the schedule scrolls. */
+.m-head {
+  grid-column: 1 / -1; position: sticky; top: 0; z-index: 4;
+  padding: 14px 22px 12px; background: var(--surface);
+  border-top: 4px solid var(--ink); border-bottom: 1px solid var(--line);
+}
+.m-head::before { content: ""; position: absolute; top: -4px; left: 0; width: 96px; height: 4px; background: var(--accent); }
+.m-head-row { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; min-width: 0; }
+.m-head h2 {
+  margin: 0; min-width: 0; font: 700 clamp(22px, 3.4vw, 38px)/1.05 var(--f-display); text-transform: uppercase;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.m-head .close { position: static; flex: none; }
 
 .close {
   position: absolute; top: 14px; right: 14px; z-index: 3;
@@ -273,18 +287,13 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
 .close:hover { background: var(--band); color: var(--band-ink); }
 .close span:first-child { font-size: 16px; }
 
-.m-side { padding: 22px 0 22px 22px; position: sticky; top: 4px; align-self: start; }
+.m-side { padding: 20px 0 22px 22px; align-self: start; position: sticky; top: var(--head-h, 150px); }
 .m-side .poster { width: 100%; }
 .m-facts { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin: 18px 0 0; }
 .m-facts dt { font: 600 10.5px/1.7 var(--f-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .m-facts dd { margin: 0; font: 700 16px/1.3 var(--f-display); letter-spacing: 0.02em; }
 
-.m-main { padding: 22px 22px 28px; min-width: 0; }
-.m-main h2 {
-  margin: 0 130px 8px 0; font: 700 clamp(28px, 4.4vw, 46px)/0.95 var(--f-display); text-transform: uppercase;
-  overflow-wrap: anywhere;
-}
-.m-main h2 + .sec-head { margin-top: 14px; }
+.m-main { padding: 4px 22px 28px; min-width: 0; }
 
 .sec-head { display: flex; align-items: center; gap: 10px; margin: 18px 0 12px; }
 .sec-no { font: 700 12px/1 var(--f-mono); color: var(--on-accent); background: var(--accent); padding: 4px 6px; letter-spacing: 0.04em; }
@@ -303,6 +312,15 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
 .day:hover span { border-color: var(--ink-2); }
 .day input:checked + span { background: var(--band); color: var(--band-ink); border-color: var(--band); box-shadow: inset 0 -3px 0 var(--accent); }
 .day input:checked + span small { color: var(--accent); }
+/* A day whose schedule isn't published yet (cinemas publish on Wednesdays). */
+.day.nodata span { border-style: dashed; background: transparent; }
+.day.nodata b { color: var(--muted); }
+.day.nodata .day-month { display: none; }
+.day.nodata span::after { content: "Soon"; font: 600 9px/1 var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.day.nodata input:checked + span { background: var(--band); border-style: solid; }
+.day.nodata input:checked + span b { color: var(--band-ink); }
+
+.field-dates { flex: 1 1 100%; }
 
 .m-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-bottom: 12px; }
 .m-controls .field { flex: 1 1 150px; }
@@ -410,14 +428,22 @@ a.trow:hover .trow-what, a.trow:hover .trow-go { color: var(--accent); }
 @media (max-width: 860px) {
   .sheet { padding: 0; }
   .sheet-panel { max-height: none; height: 100vh; height: 100dvh; grid-template-columns: minmax(0, 1fr); border: 0; }
-  .m-side { position: static; display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 16px; padding: 64px 16px 0; }
+  .m-side { position: static; display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 16px; padding: 16px 16px 0; }
   .m-facts { margin: 0; align-content: start; }
-  .m-main { padding: 16px 16px 32px; }
-  .m-main h2 { margin-right: 0; }
-  .close { top: 12px; left: 16px; right: auto; }
+  .m-main { padding: 4px 16px 32px; }
+  .m-head { padding: 10px 12px; }
+  .m-head-row { gap: 10px; margin-bottom: 8px; }
+  .stars-sheet .close { top: 12px; left: 16px; right: auto; }
 }
 
 @media (max-width: 560px) {
+  /* Keep the pinned movie header short so it never crowds the schedule. */
+  .m-head .close { width: 36px; padding: 0; justify-content: center; }
+  .m-head .close-text { display: none; }
+  .m-head h2 { font-size: 20px; }
+  .m-head .day span { padding: 5px 0 6px; gap: 2px; }
+  .m-head .day b { font-size: 17px; }
+  .m-head .day-month { display: none; }
   .topbar-meta, .clock { display: none; }
   .topbar-tools { margin-left: auto; }
   .tool { padding: 0 9px; }
@@ -430,6 +456,7 @@ a.trow:hover .trow-what, a.trow:hover .trow-go { color: var(--accent); }
   .toolbar { padding: 12px; gap: 10px; }
   .toolbar .field { flex: 1 1 calc(50% - 5px); }
   .toolbar .field-wide { flex-basis: 100%; order: 3; }
+  .toolbar .field-dates { flex-basis: 100%; }
   .chains { flex: 1 1 100%; order: 4; }
   .toggles .toggle { flex: 1; }
   .toggle span { justify-content: center; }
@@ -456,3 +483,4 @@ a.trow:hover .trow-what, a.trow:hover .trow-go { color: var(--accent); }
   .tool { width: 40px; justify-content: center; padding: 0; }
   .tool-badge { position: absolute; top: -6px; right: -6px; }
 }
+.grid > .empty { grid-column: 1 / -1; }

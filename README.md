@@ -62,9 +62,12 @@ longer than one region (about 10 s for Klang Valley).
 <https://edwardywy.github.io/52Frames/> is a static page in [`site/`](site/): plain ES modules, no
 build step, no dependencies.
 
-- **Now showing**: a poster grid of every movie in the chosen region and day. Dropdowns for date,
-  region, cinema (including **★ Starred**) and sort; GSC/TGV toggles.
-- **Movie view** (tap a poster; the back button or Esc returns to the grid): a date strip, the
+- **Now showing**: a poster grid of every movie in the chosen region and day. A 7-day date strip
+  (today + 6), dropdowns for region, cinema (including **★ Starred**) and sort; GSC/TGV toggles.
+  Days that load fine but have no shows are marked "Soon": Malaysian cinemas publish the next
+  week's showtimes on Wednesdays.
+- **Movie view** (tap a poster; the back button or Esc returns to the grid): a pinned header with
+  the back button, title and date strip, the
   schedule **by cinema** (collapsed rows with the next times; starred cinemas always first; sort by
   earliest show, nearest, name or most shows) or **by time** (one list of every show), plus cinema
   and start-time dropdowns. Each time links to the chain's booking page, where seats are chosen.
@@ -86,8 +89,9 @@ How it works:
 2. It fetches each cinema's showtimes for the day, at most 6 requests at a time, and draws results
    as they arrive ("Loaded 23/51 cinemas").
 3. If a chain or cinema fails, the page says so and shows the rest.
-4. Responses are cached in `sessionStorage` for 10 minutes per date and cinema, so switching
-   filters or reloading doesn't hit the chains again.
+4. Responses are cached for 10 minutes per date and cinema: in memory for the tab (so switching
+   back to a date is instant) and in `sessionStorage` (so a reload is quick). A region-day is about
+   2 MB, so when storage fills up the oldest entries are dropped.
 
 This works because both APIs send CORS headers: GSC allows the `edwardywy.github.io` origin, TGV
 allows any origin. No other endpoints are used.

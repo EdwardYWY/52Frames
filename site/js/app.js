@@ -54,6 +54,9 @@ const state = {
   locating: false,
   locationError: "",
   places: new Map(), // venue key -> {latitude, longitude}
+  date: todayMyt(),
+  // "date|region" combos that loaded fine but had no shows: not published yet.
+  emptyDates: new Set(),
 };
 
 // ---------------------------------------------------------------- helpers
@@ -110,7 +113,7 @@ function savePrefs() {
 
 const selectedChains = () => [...document.querySelectorAll("input[name=chain]:checked")].map((c) => c.value);
 const selectedGroup = () => document.querySelector("input[name=group]:checked")?.value || "cinema";
-const selectedDate = () => $("date").value || todayMyt();
+const selectedDate = () => state.date;
 const regionLabel = () => $("region").selectedOptions[0].text;
 
 // ---------------------------------------------------------------- distance
@@ -343,15 +346,38 @@ function posterFrame(summary, sizes) {
 
 // ---------------------------------------------------------------- controls
 
-function fillDates() {
-  const today = todayMyt();
-  for (let i = 0; i < 7; i++) {
-    const iso = addDays(today, i);
-    const p = dateParts(iso);
-    const label =
-      i === 0 ? `Today, ${p.day} ${p.month}` : i === 1 ? `Tomorrow, ${p.day} ${p.month}` : `${p.weekday}, ${p.day} ${p.month}`;
-    $("date").add(new Option(label, iso));
+const DAYS = 7;
+const emptyKey = (date) => `${date}|${$("region").value}`;
+
+/** Build or refresh a 7-day strip (today + 6). Days with no schedule yet are marked. */
+function renderDateStrip(strip, name) {
+  if (!strip.childElementCount) {
+    for (let i = 0; i < DAYS; i++) {
+      const iso = addDays(todayMyt(), i);
+      const p = dateParts(iso);
+      strip.append(
+        el(
+          "label",
+          { class: "day", title: p.long },
+          el("input", { type: "radio", name, value: iso }),
+          el("span", {}, el("small", {}, i === 0 ? "Today" : p.weekday), el("b", {}, String(p.day)), el("small", { class: "day-month" }, p.month)),
+        ),
+      );
+    }
   }
+  for (const label of strip.children) {
+    const input = label.querySelector("input");
+    input.checked = input.value === selectedDate();
+    const empty = state.emptyDates.has(emptyKey(input.value));
+    label.classList.toggle("nodata", empty);
+    label.title = `${dateParts(input.value).long}${empty ? " · schedule not published yet" : ""}`;
+  }
+}
+
+function setDate(iso) {
+  if (iso === state.date) return;
+  state.date = iso;
+  load();
 }
 
 function fillAfterOptions() {
@@ -485,6 +511,10 @@ async function load() {
   }
   if (!current()) return;
   state.loading = false;
+  // Every cinema answered (or most did) and none has a show: that day isn't published yet.
+  const answered = state.progress.done - state.errors.filter((e) => !e.includes("could not load cinemas")).length;
+  if (!state.shows.length && answered > 0) state.emptyDates.add(emptyKey(selectedDate()));
+  else if (state.shows.length) state.emptyDates.delete(emptyKey(selectedDate()));
   render();
 }
 
@@ -582,6 +612,7 @@ function renderGrid() {
     ? `${plural(movies.length, "movie")} · ${plural(new Set(visible.map(venueKey)).size, "cinema")}`
     : "";
   $("intro-date").textContent = `${dateParts(selectedDate()).long} · ${regionLabel()}`;
+  renderDateStrip($("dates"), "date");
 
   if (!movies.length) {
     const text = state.loading
@@ -590,11 +621,20 @@ function renderGrid() {
         ? $("cinema").value === STARRED
           ? "Nothing at your starred cinemas on this day."
           : "Nothing at this cinema on this day."
-        : "No showtimes found for this day and region.";
+        : notPublishedText();
     $("grid").replaceChildren(el("p", { class: "empty" }, text));
     return;
   }
   $("grid").replaceChildren(...movies.map(movieCard));
+}
+
+/** Text for a day with nothing loaded: unpublished schedule, or a real failure. */
+function notPublishedText() {
+  const p = dateParts(selectedDate());
+  if (state.emptyDates.has(emptyKey(selectedDate()))) {
+    return `${p.weekday} ${p.day} ${p.month}: no schedule yet. Malaysian cinemas publish the next week's showtimes on Wednesdays, so later days fill in then.`;
+  }
+  return state.errors.length ? "Couldn't load showtimes. See the warning above." : "No showtimes found for this day and region.";
 }
 
 // ---------------------------------------------------------------- movie sheet
@@ -614,31 +654,6 @@ function timeChip(show, now) {
   );
   if (show.booking_url) Object.assign(chip, { href: show.booking_url, target: "_blank", rel: "noopener" });
   return chip;
-}
-
-function fillMovieDates() {
-  const strip = $("m-dates");
-  if (strip.childElementCount) {
-    for (const input of strip.querySelectorAll("input")) input.checked = input.value === selectedDate();
-    return;
-  }
-  for (const option of $("date").options) {
-    const p = dateParts(option.value);
-    strip.append(
-      el(
-        "label",
-        { class: "day", title: p.long },
-        el("input", { type: "radio", name: "m-date", value: option.value, checked: option.value === selectedDate() }),
-        el(
-          "span",
-          {},
-          el("small", {}, option.value === todayMyt() ? "Today" : p.weekday),
-          el("b", {}, String(p.day)),
-          el("small", {}, p.month),
-        ),
-      ),
-    );
-  }
 }
 
 function venueBlock(key, shows, now, forceOpen) {
@@ -738,7 +753,7 @@ function renderSheet() {
       ].filter(([, v]) => v)
     : [];
   $("m-facts").replaceChildren(...facts.flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v)]));
-  fillMovieDates();
+  renderDateStrip($("m-dates"), "m-date");
 
   const keys = [...new Set(all.map(venueKey))];
   fillCinemaSelect($("m-cinema"), keys, `All cinemas (${keys.length})`);
@@ -764,7 +779,9 @@ function renderSheet() {
         ? $("m-cinema").value === STARRED
           ? "Not showing at your starred cinemas on this day."
           : "No shows match these filters."
-        : `Not showing on ${p.weekday} ${p.day} ${p.month} in ${regionLabel()}. Try another date.`;
+        : state.emptyDates.has(emptyKey(selectedDate()))
+          ? notPublishedText()
+          : `Not showing on ${p.weekday} ${p.day} ${p.month} in ${regionLabel()}. Try another date.`;
     $("m-schedule").replaceChildren(el("p", { class: "empty" }, text));
     return;
   }
@@ -842,7 +859,6 @@ function render() {
 // ---------------------------------------------------------------- wiring
 
 async function init() {
-  fillDates();
   const saved = readLocal("showtimes:prefs", {});
   if (typeof saved.region === "string" && [...$("region").options].some((o) => o.value === saved.region)) {
     $("region").value = saved.region;
@@ -856,16 +872,13 @@ async function init() {
   setInterval(tickClock, 15000);
 
   $("toolbar").addEventListener("submit", (e) => e.preventDefault());
-  for (const id of ["date", "region"]) $(id).addEventListener("change", load);
+  $("region").addEventListener("change", load);
+  for (const strip of [$("dates"), $("m-dates")]) strip.addEventListener("change", (e) => setDate(e.target.value));
   for (const box of document.querySelectorAll("input[name=chain]")) box.addEventListener("change", load);
   for (const id of ["cinema", "sort"]) $(id).addEventListener("change", render);
 
   $("grid").addEventListener("click", (e) => {
     if (e.target.closest("a.card") && !e.metaKey && !e.ctrlKey && !e.shiftKey) cameFromGrid = true;
-  });
-  $("m-dates").addEventListener("change", (e) => {
-    $("date").value = e.target.value;
-    load();
   });
   for (const id of ["m-cinema", "m-after", "m-sort"]) $(id).addEventListener("change", render);
   for (const radio of document.querySelectorAll("input[name=group]")) {
@@ -897,6 +910,10 @@ async function init() {
     else if (state.movieKey) closeSheet();
   });
   window.addEventListener("hashchange", route);
+  // The poster column pins just below the movie header, whatever height the header has.
+  new ResizeObserver(([entry]) => {
+    $("sheet").style.setProperty("--head-h", `${Math.ceil(entry.target.getBoundingClientRect().height)}px`);
+  }).observe(document.querySelector(".m-head"));
   // Another tab changed the stars: pick them up.
   window.addEventListener("storage", (e) => {
     if (e.key !== "showtimes:starred") return;
