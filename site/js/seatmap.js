@@ -65,12 +65,16 @@ export function enableSeatPreview(root, { selector, showFor, fetchPlan }) {
   function traceOutline(target) {
     // Drawn just outside the showtime, on the page's dark background, where yellow shows up.
     const pad = 3;
-    const w = target.offsetWidth + pad * 2;
-    const h = target.offsetHeight + pad * 2;
+    // Exact (fractional) size: a rounded one made the browser shrink and centre the drawing,
+    // which pulled the side lines into the row.
+    const box = target.getBoundingClientRect();
+    const w = box.width + pad * 2;
+    const h = box.height + pad * 2;
     const ns = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(ns, "svg");
     svg.setAttribute("class", "hold-trace");
     svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    svg.setAttribute("preserveAspectRatio", "none");
     svg.setAttribute("aria-hidden", "true");
     svg.style.setProperty("--hold-ms", `${HOLD_MS - TRACE_DELAY_MS}ms`);
     svg.style.setProperty("--hold-delay", `${TRACE_DELAY_MS}ms`);
@@ -177,6 +181,8 @@ export function enableSeatPreview(root, { selector, showFor, fetchPlan }) {
             el("span", {}, el("i", { class: "seat free" }), "Available"),
             el("span", {}, el("i", { class: "seat sold" }), "Sold"),
             el("span", {}, el("i", { class: "seat blocked" }), "Unavailable"),
+            // Twin and sofa seats are sold in pairs; only shown when the hall has them.
+            plan.rows.some((row) => row.seats.some((seat) => seat?.pair)) ? el("span", {}, el("i", { class: "seat free pair" }), "Twin seat") : null,
             el("span", { class: "seat-when" }, `Live from ${show.chain} · ${clock()}`),
           ),
         );

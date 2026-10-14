@@ -7,8 +7,8 @@
 // numbers:  [day, cinema, movie, minute, experience, hall, soldOut]
 // where minute counts from midnight of the business day (>= 1440 means after midnight).
 
-import { addDays, makeShowtime } from "./models.js?v=18";
-import { tgvCinemaName } from "./places.js?v=18";
+import { addDays, makeShowtime } from "./models.js?v=19";
+import { tgvCinemaName } from "./places.js?v=19";
 
 export const SNAPSHOT_URL = "data/showtimes.json";
 /** Older than this, the page fetches live instead (the job runs every 6 h; cron can run late). */
