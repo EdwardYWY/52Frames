@@ -581,7 +581,9 @@ function movieCard(summary, index) {
     isStarred(lead.key) ? el("span", { class: "card-star", title: "Starred cinema" }, "★") : null,
     el("span", { class: "card-venue" }, splitKey(lead.key)[1]),
     km ? el("span", { class: "card-km" }, km) : null,
-    lead.others ? el("span", { class: "card-more" }, `+${lead.others}`) : null,
+    lead.others
+      ? el("span", { class: "card-more", title: `Also at ${plural(lead.others, "other cinema")}` }, `+${lead.others} more ${lead.others === 1 ? "cinema" : "cinemas"}`)
+      : null,
     ].filter(Boolean),
   );
   return card;
