@@ -1,6 +1,6 @@
-// A hidden extra: keep the mouse on a TGV showtime for 3 seconds, or press and hold it on a touch
-// screen, to see that show's live seat map, straight from TGV. A plain tap or click still opens
-// the booking page as before.
+// A hidden extra: keep the mouse on a showtime for 3 seconds, or press and hold it on a touch
+// screen, to see that show's live seat map, straight from the chain (GSC or TGV). Nothing is
+// fetched until the 3 seconds are up. A plain tap or click still opens the booking page.
 
 export const HOLD_MS = 3000;
 const MOVE_PX = 10; // a finger that moves this far is scrolling, not holding
@@ -115,6 +115,7 @@ export function enableSeatPreview(root, { selector, showFor, fetchPlan }) {
     close();
     anchor = target;
     mode = how;
+    pop.dataset.chain = show.chain;
     controller = new AbortController();
     const { signal } = controller;
     const head = el(
@@ -142,7 +143,7 @@ export function enableSeatPreview(root, { selector, showFor, fetchPlan }) {
             el("span", {}, el("i", { class: "seat free" }), "Available"),
             el("span", {}, el("i", { class: "seat sold" }), "Sold"),
             el("span", {}, el("i", { class: "seat blocked" }), "Unavailable"),
-            el("span", { class: "seat-when" }, `Live from TGV · ${clock()}`),
+            el("span", { class: "seat-when" }, `Live from ${show.chain} · ${clock()}`),
           ),
         );
         place();

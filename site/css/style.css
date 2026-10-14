@@ -624,12 +624,12 @@ a.trow:hover .trow-what, a.trow:hover .trow-go { color: var(--accent); }
 a.trow:hover .overnight { color: var(--accent); }
 
 /* -------------------------------------------------------------- live seat map (seatmap.js)
-   Hidden: hold a TGV showtime for 3 s (mouse rests on it, or a finger presses it). */
-.tgv-hold { position: relative; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+   Hidden: hold a showtime for 3 s (mouse rests on it, or a finger presses it). */
+.seat-hold { position: relative; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 /* Touch only: a thin bar fills while the finger holds, after a moment so taps don't flash it. */
-.tgv-hold.holding::after {
+.seat-hold.holding::after {
   content: ""; position: absolute; left: 0; bottom: 0; height: 3px; width: 100%;
-  background: var(--tgv); transform-origin: left; animation: seat-hold 2.6s linear 0.4s both;
+  background: var(--accent); transform-origin: left; animation: seat-hold 2.6s linear 0.4s both;
 }
 @keyframes seat-hold { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
@@ -639,6 +639,7 @@ a.trow:hover .overnight { color: var(--accent); }
   border-top: 4px solid var(--tgv); box-shadow: 0 18px 48px rgb(0 0 0 / 0.35); padding: 12px 14px 12px;
 }
 .seatmap[hidden] { display: none; }
+.seatmap[data-chain="GSC"] { border-top-color: var(--gsc); }
 .seatmap.as-sheet { left: 0; right: 0; bottom: 0; top: auto; width: auto; max-height: 85dvh; padding-bottom: max(14px, env(safe-area-inset-bottom)); }
 .seatmap-head { display: flex; align-items: baseline; gap: 10px; }
 .seatmap-head b { font: 700 22px/1 var(--f-display); font-variant-numeric: tabular-nums; }

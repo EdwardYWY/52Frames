@@ -15,6 +15,7 @@ export const GSC = {
   showtimesUrl:
     "https://epaymentapi.gsc.com.my/showtimews/service.asmx/getShowTimesByLocation_ParentChild_V2",
   bookingBase: "https://epaymentwebapp.gsc.com.my/showtime-by-movies",
+  seatsUrl: "https://epaymentapi.gsc.com.my/showtimews/service.asmx/getHallSeatStatus",
 };
 
 export function parseGscCinemas(payload) {
@@ -56,6 +57,11 @@ function gscStart(day, hhmm) {
   return `${day}T${hhmm.slice(0, 2)}:${hhmm.slice(2)}`;
 }
 
+const gscHall = (show) => {
+  const hall = attr(show, "hname");
+  return /^\d+$/.test(hall) ? `Hall ${hall}` : hall;
+};
+
 /** Browser XML adapter. Tests pass their own `parseXml` with the same tiny interface. */
 export function domParseXml(text) {
   const doc = new DOMParser().parseFromString(text, "application/xml");
@@ -80,7 +86,6 @@ export function parseGscShowtimes(xmlText, cinema, parseXml = domParseXml) {
       const bookingUrl = gscBookingUrl(attr(parent, "code"), title);
       for (const child of parent.getElementsByTagName("child")) {
         for (const show of child.getElementsByTagName("show")) {
-          const hall = attr(show, "hname");
           shows.push(
             makeShowtime({
               chain: GSC.chain,
@@ -91,7 +96,7 @@ export function parseGscShowtimes(xmlText, cinema, parseXml = domParseXml) {
               start: gscStart(attr(show, "date"), attr(show, "time")),
               business_date: businessDate,
               experience: attr(show, "type"),
-              hall: /^\d+$/.test(hall) ? `Hall ${hall}` : hall,
+              hall: gscHall(show),
               duration_mins: intOrNull(attr(child, "duration")),
               rating: attr(child, "rating"),
               language: attr(child, "lang"),
@@ -109,6 +114,60 @@ export function parseGscShowtimes(xmlText, cinema, parseXml = domParseXml) {
     }
   }
   return shows;
+}
+
+/**
+ * Where GSC keeps a show's seats: { hid, date, time } from its showtimes XML, or null.
+ * Shows don't carry GSC's hall id (the snapshot leaves it out), so they're matched by start and hall.
+ */
+export function findGscHall(xmlText, show, parseXml = domParseXml) {
+  for (const node of parseXml(xmlText).getElementsByTagName("show")) {
+    const date = attr(node, "date");
+    const time = attr(node, "time");
+    if (`${date}T${time.slice(0, 2)}:${time.slice(2)}` === show.start && gscHall(node) === show.hall) {
+      return { hid: attr(node, "hid"), date, time };
+    }
+  }
+  return null;
+}
+
+// Seat types nobody can book online: house, reservation, repair, locked, blocked.
+const GSC_CLOSED_TYPES = new Set(["H", "R", "D", "L", "X"]);
+const GSC_PAIR_TYPES = new Set(["T", "TS", "4S"]);
+
+/**
+ * GSC's getHallSeatStatus XML as rows of cells, in the same shape as parseTgvSeatPlan:
+ * the front row (nearest the screen) first, seat 1 on the left.
+ */
+export function parseGscSeatPlan(xmlText, parseXml = domParseXml) {
+  const root = parseXml(xmlText);
+  const grid = new Map(); // y -> { label, seats: Map(x -> seat) }
+  for (const row of root.getElementsByTagName("row")) {
+    const y = Number(attr(row, "y"));
+    if (!grid.has(y)) grid.set(y, { label: attr(row, "value"), seats: new Map() });
+    const line = grid.get(y);
+    for (const col of row.getElementsByTagName("col")) {
+      const status = attr(col, "status");
+      const type = attr(col, "type");
+      line.seats.set(Number(attr(col, "x")), {
+        number: `${attr(row, "value")}${attr(col, "value")}`,
+        state: status === "A" && !GSC_CLOSED_TYPES.has(type) ? "free" : status === "B" ? "sold" : "blocked",
+        pair: GSC_PAIR_TYPES.has(type),
+      });
+    }
+  }
+  const xs = [...grid.values()].flatMap((line) => [...line.seats.keys()]);
+  if (!xs.length) throw new Error("No seat plan for this show");
+  const ys = [...grid.keys()];
+  const rows = [];
+  for (let y = Math.max(...ys); y >= Math.min(...ys); y--) {
+    const line = grid.get(y);
+    const seats = [];
+    for (let x = Math.min(...xs); x <= Math.max(...xs); x++) seats.push(line?.seats.get(x) || null);
+    rows.push({ label: line?.label || "", seats });
+  }
+  const all = rows.flatMap((row) => row.seats).filter(Boolean);
+  return { rows, free: all.filter((seat) => seat.state === "free").length, total: all.length };
 }
 
 // GSC's showtime data has no subtitles; its public movie pages (www.gsc.com.my/movie/<slug>/) do.
@@ -375,11 +434,29 @@ async function request(fetchImpl, url, init = {}, signal) {
   }
 }
 
-/** The two chains, each with fetchCinemas() and fetchShowtimes(cinema, isoDate). */
+// The seat map first looks up the show's id in that cinema's day of showtimes. Holding several
+// times at one cinema reuses that list for a while, so each later seat map is a single request.
+const SEAT_LOOKUP_TTL_MS = 2 * 60 * 1000;
+
+/**
+ * The two chains, each with fetchCinemas(), fetchShowtimes(cinema, isoDate) and
+ * fetchSeatPlan(show) for the live seat map.
+ */
 export function createProviders({
   fetch: fetchImpl = globalThis.fetch.bind(globalThis),
   parseXml = domParseXml,
+  now = () => Date.now(),
 } = {}) {
+  const lookups = new Map(); // url + body -> { t, value: Promise }
+  const lookup = (url, init, read, signal) => {
+    const key = `${url} ${init.body || ""}`;
+    const hit = lookups.get(key);
+    if (hit && now() - hit.t < SEAT_LOOKUP_TTL_MS) return hit.value;
+    const value = request(fetchImpl, url, init, signal).then(read);
+    value.catch(() => lookups.delete(key)); // a failure isn't remembered
+    lookups.set(key, { t: now(), value });
+    return value;
+  };
   return {
     GSC: {
       async fetchCinemas(signal) {
@@ -394,6 +471,16 @@ export function createProviders({
         });
         const res = await request(fetchImpl, `${GSC.showtimesUrl}?${params}`, {}, signal);
         return parseGscShowtimes(await res.text(), cinema, parseXml);
+      },
+      /** The live seat plan of one show (needs show.hall_group for premium halls). */
+      async fetchSeatPlan(show, signal) {
+        const params = new URLSearchParams({ locationid: show.cinema_id, oprndate: show.business_date, hallGroup: show.hall_group || "" });
+        const xml = await lookup(`${GSC.showtimesUrl}?${params}`, {}, (res) => res.text(), signal);
+        const hall = findGscHall(xml, show, parseXml);
+        if (!hall) throw new Error("This show is no longer listed");
+        const seats = new URLSearchParams({ locationid: show.cinema_id, hallid: hall.hid, showdate: hall.date, showtime: hall.time });
+        const res = await request(fetchImpl, `${GSC.seatsUrl}?${seats}`, {}, signal);
+        return parseGscSeatPlan(await res.text(), parseXml);
       },
     },
     TGV: {
@@ -416,12 +503,11 @@ export function createProviders({
       },
       /** The live seat plan of one show: finds its session, then asks for the plan. */
       async fetchSeatPlan(show, signal) {
-        const post = (url, body) =>
-          request(fetchImpl, url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }, signal);
-        const sessions = await post(TGV.sessionsUrl, { cinemaid: show.cinema_id, businessdate: show.business_date });
-        const sessionid = findTgvSession(await sessions.json(), show);
+        const post = (body) => ({ method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+        const sessions = await lookup(TGV.sessionsUrl, post({ cinemaid: show.cinema_id, businessdate: show.business_date }), (res) => res.json(), signal);
+        const sessionid = findTgvSession(sessions, show);
         if (!sessionid) throw new Error("This show is no longer listed");
-        const plan = await post(TGV.seatPlanUrl, { cinemaid: show.cinema_id, sessionid });
+        const plan = await request(fetchImpl, TGV.seatPlanUrl, post({ cinemaid: show.cinema_id, sessionid }), signal);
         return parseTgvSeatPlan(await plan.json());
       },
     },

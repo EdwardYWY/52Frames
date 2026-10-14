@@ -826,12 +826,18 @@ function notPublishedText(view) {
 
 // ---------------------------------------------------------------- movie sheet
 
-// TGV showtimes in the schedule -> their show, for the hold-to-see-seats preview (seatmap.js).
+// Showtimes in the schedule -> their show, for the hold-to-see-seats preview (seatmap.js).
 const seatShows = new WeakMap();
 function allowSeatPreview(node, show) {
-  if (show.chain !== "TGV" || !show.cinema_id) return;
+  if (!providers[show.chain]?.fetchSeatPlan || !show.cinema_id) return;
   seatShows.set(node, show);
-  node.classList.add("tgv-hold");
+  node.classList.add("seat-hold");
+}
+
+/** A show's live seat plan. GSC's premium halls need the cinema's hall group, which shows don't carry. */
+function fetchSeatPlan(show, signal) {
+  const cinema = [...state.sheet.cinemas, ...state.main.cinemas].find((c) => c.chain === show.chain && c.name === show.cinema_name);
+  return providers[show.chain].fetchSeatPlan({ ...show, hall_group: cinema?.hall_group || "" }, signal);
 }
 let seatPreview = null;
 
@@ -1164,9 +1170,9 @@ async function init() {
     });
   }
   seatPreview = enableSeatPreview($("m-schedule"), {
-    selector: ".tgv-hold",
+    selector: ".seat-hold",
     showFor: (node) => seatShows.get(node),
-    fetchPlan: (show, signal) => providers.TGV.fetchSeatPlan(show, signal),
+    fetchPlan: fetchSeatPlan,
   });
   $("sheet").addEventListener("click", (e) => {
     if (e.target.closest("[data-close]")) closeSheet();

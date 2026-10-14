@@ -232,3 +232,50 @@ test("TGV seat map: finds the show's session, then reads its seat plan", async (
   assert.deepEqual(calls.map((c) => c.body), [{ cinemaid: "PKL", businessdate: "2026-10-14" }, { cinemaid: "PKL", sessionid: "7086" }]);
   assert.equal(calls[1].url, "https://api.tgv.com.my/api/boxoffice/v1/moviesession_getseatplan");
 });
+
+test("GSC seat map: finds the hall, then reads its seats", async () => {
+  const { findGscHall, parseGscSeatPlan } = await import("../../site/js/providers.js");
+  const xml = fixture("gsc_showtimes_120.xml");
+  // An after-midnight show: GSC files it under the calendar date it starts on.
+  const late = gscShows().find((s) => s.start === "2026-10-16T00:15");
+  assert.deepEqual(findGscHall(xml, late, parseXml), { hid: "5", date: "2026-10-16", time: "0015" });
+  assert.equal(findGscHall(xml, { ...late, hall: "Hall 9" }, parseXml), null);
+
+  const plan = parseGscSeatPlan(fixture("gsc_seats_120_hall5.xml"), parseXml);
+  assert.equal(plan.total, 112);
+  assert.equal(plan.free, 108, "two sold, two house seats");
+  assert.deepEqual(plan.rows.map((r) => r.label), ["A", "B", "C", "D", "E", "F", "G", "H"], "front row first");
+  assert.equal(plan.rows[0].seats[0].number, "A01");
+  assert.equal(plan.rows[0].seats[2], null, "aisle");
+  assert.equal(plan.rows[1].seats[5].number, "B05");
+  assert.equal(plan.rows[1].seats[5].state, "sold");
+  assert.equal(plan.rows[3].seats[14].state, "blocked", "house seat");
+
+  const calls = [];
+  const fakeFetch = async (url) => {
+    calls.push(String(url));
+    const body = String(url).includes("getHallSeatStatus") ? fixture("gsc_seats_120_hall5.xml") : xml;
+    return { ok: true, status: 200, text: async () => body };
+  };
+  const live = await createProviders({ fetch: fakeFetch, parseXml }).GSC.fetchSeatPlan({ ...late, hall_group: "" });
+  assert.equal(live.free, 108);
+  assert.equal(calls[1], "https://epaymentapi.gsc.com.my/showtimews/service.asmx/getHallSeatStatus?locationid=120&hallid=5&showdate=2026-10-16&showtime=0015");
+});
+
+test("seat maps at one cinema look its showtimes up once, for two minutes", async () => {
+  let t = 0;
+  const calls = [];
+  const fakeFetch = async (url) => {
+    calls.push(String(url).split("/").pop());
+    const body = String(url).endsWith("getseatplan") ? json("tgv_seatplan_BU0_indulge.json") : json("tgv_sessions_PKL.json");
+    return { ok: true, status: 200, json: async () => body };
+  };
+  const tgv = createProviders({ fetch: fakeFetch, parseXml, now: () => t }).TGV;
+  const [a, b] = tgvShows();
+  await tgv.fetchSeatPlan(a);
+  await tgv.fetchSeatPlan(b);
+  assert.deepEqual(calls, ["moviesession_get", "moviesession_getseatplan", "moviesession_getseatplan"]);
+  t = 2 * 60 * 1000;
+  await tgv.fetchSeatPlan(a);
+  assert.equal(calls.filter((c) => c === "moviesession_get").length, 2, "looked up again once stale");
+});
