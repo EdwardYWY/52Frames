@@ -63,7 +63,8 @@ longer than one region (about 10 s for Klang Valley).
 build step, no dependencies.
 
 - **Movies**: a poster grid across all published booking dates, including advance sales.
-  Search by title (`/` focuses search), filter by region, cinemas and chain. Concerts are hidden
+  Search by title or language ("CAN" or "Cantonese"; `/` focuses search), filter by region
+  (All Malaysia by default), cinemas and chain. Concerts are hidden
   by default; the Content checkbox includes them and remembers the choice. Musicals stay visible.
   Posters have no overlays or corner decoration; the show count sits below the title, followed by "Showing now"
   or "Next screening" using the booking business date.
@@ -72,9 +73,10 @@ build step, no dependencies.
 - **Movie view** (tap a poster; the back button or Esc returns to the grid): a pinned header with
   the back button, title and only that movie's available booking dates (including month labels).
   The schedule shows **by time** (the default; the last choice is remembered) or **by cinema**
-  (collapsed rows with the next times; starred cinemas first, with a star pattern; sort by earliest
-  show, nearest, name or most shows), with cinema (several at once, or ★ Starred) and start-time
-  dropdowns. Each time links to the chain's booking page, where seats are chosen. Sold-out times
+  (collapsed rows with the next times; starred cinemas first; sort by earliest show, nearest, name
+  or most shows); starred cinemas get a star pattern in both. Region (starts from the main page's),
+  cinema (several at once, or ★ Starred) and start-time dropdowns stay pinned under the header
+  while the schedule scrolls (not on phones); a Top button returns to the top. Each time links to the chain's booking page, where seats are chosen. Sold-out times
   are struck through, started ones dimmed, after-midnight ones marked `+1`.
 - **Subtitles** per chain ("Subtitles (GSC)", "Subtitles (TGV)") with a link to each chain's page
   about the movie; they often differ. TGV lists them in its sessions data. GSC only shows them on
@@ -86,6 +88,11 @@ build step, no dependencies.
   No contour generation or animation runs in the browser.
 - **Posters** come from both chains; when both have one, the higher-resolution one is used where
   it matters (GSC's 500 px poster in the movie view) and the browser picks a lighter one for the grid.
+- **Cinema names** use GSC's "Town - Mall" style for both chains: TGV's "TGV 1 Utama" shows as
+  "Petaling Jaya - 1 Utama" (table `TGV_NAMES` in `site/js/places.js`, mirrored in
+  `cinema_showtimes/tgv.py`; a new TGV cinema shows as "<State> - <name>" until it's added there).
+  Languages are matched across chains (GSC's "IND" is TGV's "Bahasa Indonesia"), and a session
+  TGV lists under two movie entries is shown once.
 - **Location** (optional, top bar): shows the distance to each cinema and enables "Nearest". GSC
   sends cinema coordinates; TGV's are in `site/js/places.js` (looked up once from OpenStreetMap,
   © OpenStreetMap contributors), because TGV's own map links are missing or wrong for many cinemas.

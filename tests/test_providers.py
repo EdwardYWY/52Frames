@@ -93,10 +93,10 @@ class TgvCinemaParsingTest(unittest.TestCase):
         self.assertEqual([c.cinema_id for c in cinemas], ["PKL", "BI0"])
         pkl, bukit_indah = cinemas
         self.assertEqual(pkl.chain, "TGV")
-        self.assertEqual(pkl.name, "TGV Pavilion Kuala Lumpur (New)")
+        self.assertEqual(pkl.name, "Kuala Lumpur - Pavilion Kuala Lumpur")
         self.assertEqual(pkl.region, "Klang Valley")
         self.assertEqual(pkl.state, "Klang Valley")
-        self.assertEqual(bukit_indah.name, "TGV Bukit Indah")
+        self.assertEqual(bukit_indah.name, "Johor Bahru - AEON Bukit Indah")
         self.assertEqual(bukit_indah.region, "Southern")
         self.assertEqual(bukit_indah.state, "Johor")
 

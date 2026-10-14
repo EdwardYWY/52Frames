@@ -24,10 +24,13 @@ export function normalizeTitle(title) {
   return latinWords.join(" ").replace(NON_ALNUM_RE, " ").trim();
 }
 
-/** Same field names as Showtime.to_dict() in Python. `start` is "YYYY-MM-DDTHH:MM" (MYT). */
+/**
+ * One name per language, whichever chain it came from: GSC sends codes ("IND", "BM"), TGV full
+ * names ("Bahasa Indonesia"). Movies are grouped by this, so both must map to the same name.
+ */
 export function normalizeLanguage(language) {
   const value = String(language || '').trim();
-  const aliases = { eng: 'English', english: 'English', tam: 'Tamil', tamil: 'Tamil', hin: 'Hindi', hindi: 'Hindi', chi: 'Chinese', chinese: 'Chinese', man: 'Mandarin', mandarin: 'Mandarin', bm: 'Malay', malay: 'Malay', 'bahasa melayu': 'Malay', jpn: 'Japanese', japanese: 'Japanese', kor: 'Korean', korean: 'Korean' };
+  const aliases = { eng: 'English', english: 'English', tam: 'Tamil', tamil: 'Tamil', hin: 'Hindi', hindi: 'Hindi', chi: 'Chinese', chinese: 'Chinese', man: 'Mandarin', mandarin: 'Mandarin', bm: 'Malay', malay: 'Malay', 'bahasa melayu': 'Malay', ind: 'Bahasa Indonesia', indonesian: 'Bahasa Indonesia', 'bahasa indonesia': 'Bahasa Indonesia', can: 'Cantonese', cantonese: 'Cantonese', tha: 'Thai', thai: 'Thai', tel: 'Telugu', telugu: 'Telugu', mal: 'Malayalam', malayalam: 'Malayalam', jpn: 'Japanese', japanese: 'Japanese', kor: 'Korean', korean: 'Korean' };
   return aliases[value.toLowerCase()] || value;
 }
 

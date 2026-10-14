@@ -2,7 +2,7 @@
 // Ports cinema_showtimes/aggregator.py, plus a sessionStorage cache for the browser.
 
 export const CONCURRENCY = 6;
-import { movieGroupKey, normalizeLanguage } from './models.js?v=7';
+import { movieGroupKey, normalizeLanguage } from './models.js?v=8';
 export const CACHE_TTL_MS = 10 * 60 * 1000;
 // Bump when the cached shape of a showtime changes.
 const CACHE_PREFIX = "showtimes:v3:";
@@ -306,4 +306,18 @@ export async function collectShowtimes(
 
   result.showtimes.sort(byStartChainCinema);
   return result;
+}
+
+/**
+ * Drop repeats of the same session. TGV sometimes lists one session under two movie entries
+ * (e.g. "Jailer 2 (Tamil)" and "(First Day First Showing) Jailer 2"), which group as one movie.
+ */
+export function uniqueShows(shows) {
+  const seen = new Set();
+  return shows.filter((s) => {
+    const key = [s.chain, s.cinema_id, s.cinema_name, s.start, s.hall, s.experience, movieGroupKey(s)].join("|");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }

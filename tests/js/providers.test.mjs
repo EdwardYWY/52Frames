@@ -89,12 +89,20 @@ test("TGV: parses states, skipping the 'all' bucket", () => {
   );
   const [pkl, bukitIndah] = cinemas;
   assert.equal(pkl.chain, "TGV");
-  assert.equal(pkl.name, "TGV Pavilion Kuala Lumpur (New)");
+  assert.equal(pkl.name, "Kuala Lumpur - Pavilion Kuala Lumpur");
   assert.equal(pkl.region, "Klang Valley");
   assert.equal(pkl.state, "Klang Valley");
-  assert.equal(bukitIndah.name, "TGV Bukit Indah");
+  assert.equal(bukitIndah.name, "Johor Bahru - AEON Bukit Indah");
   assert.equal(bukitIndah.region, "Southern");
   assert.equal(bukitIndah.state, "Johor");
+});
+
+test("TGV: unknown cinemas drop the TGV prefix and lead with the state", async () => {
+  const { tgvCinemaName } = await import("../../site/js/places.js");
+  assert.equal(tgvCinemaName("NEW", "TGV Some Mall (New)", "Johor"), "Johor - Some Mall");
+  assert.equal(tgvCinemaName("NEW", "Tgv Some Mall", ""), "Some Mall");
+  assert.equal(tgvCinemaName("NEW", "Johor - Some Mall", "Johor"), "Johor - Some Mall");
+  assert.equal(tgvCinemaName("BU0", "TGV 1 Utama", "Klang Valley"), "Petaling Jaya - 1 Utama");
 });
 
 test("TGV: parses every session", () => {

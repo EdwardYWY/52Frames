@@ -53,3 +53,65 @@ export const TGV_LOCATIONS = {
   "TOP": [1.55293, 103.79785], // Toppen
   "VIV": [1.5268, 110.3693], // Vivacity Kuching
 };
+
+// TGV cinema names in GSC's "Town - Mall" style, by TGV cinema id. TGV's own names are
+// "TGV <mall>" (the chain badge already says TGV) and some carry "(New)". Mall names were checked
+// against OpenStreetMap when the coordinates above were looked up.
+// New TGV cinema missing here? It shows as "<State> - <TGV's name>" without the prefix.
+export const TGV_NAMES = {
+  "1SM": "Kuala Lumpur - 1 Shamelin",
+  "BU0": "Petaling Jaya - 1 Utama",
+  "1AV": "Penang - 1st Avenue",
+  "ALM": "Putrajaya - Alamanda",
+  "AMP": "Ampang - Ampang Point",
+  "AU2": "Kuala Lumpur - AEON AU2 Setiawangsa",
+  "BIN": "Bintulu - Boulevard",
+  "BI0": "Johor Bahru - AEON Bukit Indah",
+  "BKM": "Bukit Mertajam - AEON Bukit Mertajam",
+  "BR0": "Klang - AEON Bukit Raja",
+  "BBT": "Klang - AEON Bukit Tinggi",
+  "ICT": "Shah Alam - Central i-City",
+  "CHR": "Cheras - AEON Cheras Selatan",
+  "CTR": "Kuala Lumpur - Cheras Sentral",
+  "CYB": "Cyberjaya - DPulze",
+  "GUR": "Penang - Gurney Paragon",
+  "JAY": "Petaling Jaya - Jaya Shopping Centre",
+  "KP0": "Kepong - AEON Metro Prima",
+  "IP0": "Ipoh - AEON Kinta City",
+  "KUL": "Kulai - AEON Kulaijaya",
+  "MSR": "Kemaman - Mesra Mall",
+  "MN0": "Seri Kembangan - The Mines",
+  "IMP": "Miri - Imperial Mall",
+  "PBJ": "Kuala Lumpur - Pavilion Bukit Jalil",
+  "PDH": "Kuala Lumpur - Pavilion Damansara Heights",
+  "PKL": "Kuala Lumpur - Pavilion Kuala Lumpur",
+  "RWK": "Rawang - AEON Rawang Anggun",
+  "KLE": "Ipoh - Sentra Mall Klebang",
+  "S20": "Seremban - AEON Seremban 2",
+  "MAN": "Seri Manjung - AEON Seri Manjung",
+  "STW": "Puchong - SetiaWalk",
+  "S18": "Ipoh - AEON Station 18",
+  "STR": "Petaling Jaya - The Strand Kota Damansara",
+  "SWP": "Kuala Lumpur - Sunway Putra",
+  "SW0": "Subang Jaya - Sunway Pyramid",
+  "SWS": "Subang Jaya - Sunway Square",
+  "SWV": "Kuala Lumpur - Sunway Velocity",
+  "WWM": "Kuala Lumpur - Sunway Wangsa Walk",
+  "KLC": "Kuala Lumpur - Suria KLCC",
+  "TAI": "Taiping - AEON Taiping",
+  "TSC": "Johor Bahru - Tasek Central",
+  "TBR": "Johor Bahru - AEON Tebrau City",
+  "KSL": "Klang - KSL Esplanade",
+  "TOP": "Johor Bahru - Toppen",
+  "VIV": "Kuching - Vivacity Megamall",
+};
+
+/**
+ * A TGV cinema's display name: the table above, else TGV's own name without the "TGV" prefix and
+ * "(New)" tag, led by the state. Already-converted names come back unchanged.
+ */
+export function tgvCinemaName(id, rawName, stateLabel = "") {
+  if (TGV_NAMES[id]) return TGV_NAMES[id];
+  const name = String(rawName || id).replace(/^tgv\s+/i, "").replace(/\s*\(new\)\s*$/i, "").trim() || String(id);
+  return stateLabel && !name.includes(" - ") ? `${stateLabel} - ${name}` : name;
+}

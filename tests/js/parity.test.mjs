@@ -13,6 +13,7 @@ import {
   parseTgvShowtimes,
 } from "../../site/js/providers.js";
 import { parseXml } from "../../scripts/xml.mjs";
+import { TGV_NAMES, tgvCinemaName } from "../../site/js/places.js";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const fixture = (name) => readFileSync(new URL(`../fixtures/${name}`, import.meta.url), "utf8");
@@ -48,6 +49,8 @@ print(json.dumps({
   "gsc": [s.to_dict() for s in gsc.parse_showtimes((f / "gsc_showtimes_120.xml").read_text(), g[0])],
   "tgv": [s.to_dict() for s in tgv.parse_showtimes(json.loads((f / "tgv_sessions_PKL.json").read_text()), t[0])],
   "titles": [normalize_title(x) for x in json.loads(sys.argv[1])],
+  "tgv_names": tgv.NAMES,
+  "tgv_fallback": tgv.cinema_name("NEW", "TGV Some Mall (New)", "Johor"),
 }))
 `;
   try {
@@ -69,4 +72,6 @@ test("JS and Python parsers agree on every fixture", (t) => {
   assert.deepEqual(parseGscShowtimes(fixture("gsc_showtimes_120.xml"), gscCinemas[0], parseXml), py.gsc);
   assert.deepEqual(parseTgvShowtimes(JSON.parse(fixture("tgv_sessions_PKL.json")), tgvCinemas[0]), py.tgv);
   assert.deepEqual(TITLES.map(normalizeTitle), py.titles);
+  assert.deepEqual(TGV_NAMES, py.tgv_names);
+  assert.equal(tgvCinemaName("NEW", "TGV Some Mall (New)", "Johor"), py.tgv_fallback);
 });

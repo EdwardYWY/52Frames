@@ -7,7 +7,8 @@
 // numbers:  [day, cinema, movie, minute, experience, hall, soldOut]
 // where minute counts from midnight of the business day (>= 1440 means after midnight).
 
-import { addDays, makeShowtime } from "./models.js?v=7";
+import { addDays, makeShowtime } from "./models.js?v=8";
+import { tgvCinemaName } from "./places.js?v=8";
 
 export const SNAPSHOT_URL = "data/showtimes.json";
 /** Older than this, the page fetches live instead (the job runs every 6 h; cron can run late). */
@@ -108,7 +109,12 @@ const hm = (minutes) => `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${
 /** Unpack the snapshot into { days, errors, cinemas, showtimes } with the same shapes as live data. */
 export function decodeSnapshot(snap) {
   if (snap?.version !== SNAPSHOT_VERSION) throw new Error("unknown snapshot version");
-  const cinemas = snap.cinemas.map((row) => Object.fromEntries(CINEMA_FIELDS.map((f, i) => [f, row[i]])));
+  const cinemas = snap.cinemas.map((row) => {
+    const c = Object.fromEntries(CINEMA_FIELDS.map((f, i) => [f, row[i]]));
+    // Snapshots made before TGV names were converted say "TGV 1 Utama": convert on the way in.
+    if (c.chain === "TGV") c.name = tgvCinemaName(c.cinema_id, c.name, c.state);
+    return c;
+  });
   const movies = snap.movies.map((row) => Object.fromEntries(MOVIE_FIELDS.map((f, i) => [f, row[i]])));
   const showtimes = snap.shows.map(([day, cinemaIndex, movieIndex, minute, experience, hall, soldOut]) => {
     const businessDate = snap.days[day];

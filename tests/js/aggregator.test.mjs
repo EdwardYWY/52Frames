@@ -280,6 +280,15 @@ test("every TGV location is inside Malaysia and not a copy of another", async ()
   assert.equal(new Set(points.map(String)).size, points.length);
 });
 
+test("every TGV cinema with a location has a unique Town - Mall name", async () => {
+  const { TGV_LOCATIONS, TGV_NAMES } = await import("../../site/js/places.js");
+  assert.deepEqual(Object.keys(TGV_NAMES).sort(), Object.keys(TGV_LOCATIONS).sort());
+  const names = Object.values(TGV_NAMES);
+  assert.equal(new Set(names).size, names.length);
+  for (const name of names) assert.match(name, /^[^-]+ - \S/);
+  for (const name of names) assert.doesNotMatch(name, /\bTGV\b|\(New\)/i);
+});
+
 test("a full storage keeps working: memory serves repeats, oldest stored entries make room", () => {
   let clock = 0;
   const store = new MemoryStorage();
@@ -310,4 +319,25 @@ test("a full storage keeps working: memory serves repeats, oldest stored entries
   const reloaded = createCache(small, { ttlMs: 1000, now: () => clock });
   assert.equal(reloaded.get("d5"), "D5");
   assert.equal(reloaded.get("d1"), undefined);
+});
+
+test("the same session listed under two TGV movie entries counts once", async () => {
+  const { uniqueShows } = await import("../../site/js/aggregator.js");
+  const { makeShowtime } = await import("../../site/js/models.js");
+  const base = { chain: "TGV", cinema_id: "BKM", cinema_name: "Bukit Mertajam - AEON Bukit Mertajam", language: "Tamil", start: "2026-10-15T09:00", business_date: "2026-10-15", experience: "DELUXE", hall: "Cinema 6" };
+  const shows = [
+    makeShowtime({ ...base, movie_title: "Jailer 2 (Tamil)" }),
+    makeShowtime({ ...base, movie_title: "(First Day First Showing) Jailer 2" }),
+    makeShowtime({ ...base, movie_title: "Jailer 2 (Tamil)", hall: "Cinema 5", start: "2026-10-15T09:30" }),
+  ];
+  assert.equal(uniqueShows(shows).length, 2);
+});
+
+test("GSC language codes and TGV language names group together", async () => {
+  const { normalizeLanguage, movieGroupKey } = await import("../../site/js/models.js");
+  assert.equal(normalizeLanguage("IND"), "Bahasa Indonesia");
+  assert.equal(normalizeLanguage("Bahasa Indonesia"), "Bahasa Indonesia");
+  assert.equal(normalizeLanguage("CAN"), normalizeLanguage("Cantonese"));
+  assert.equal(normalizeLanguage("THA"), normalizeLanguage("Thai"));
+  assert.equal(movieGroupKey({ movie_key: "x", language: "IND" }), movieGroupKey({ movie_key: "x", language: "Bahasa Indonesia" }));
 });
