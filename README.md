@@ -65,7 +65,7 @@ build step, no dependencies.
 - **Movies**: a poster grid across all published booking dates, including advance sales.
   Search by title (`/` focuses search), filter by region, cinemas and chain. Concerts are hidden
   by default; the Content checkbox includes them and remembers the choice. Musicals stay visible.
-  Posters have no count overlay or corner decoration; status below each poster says "Showing now"
+  Posters have no overlays or corner decoration; the show count sits below the title, followed by "Showing now"
   or "Next screening" using the booking business date.
   Sort labels remain Most shows, Title A–Z and Earliest show. Earliest show orders today's movies
   A–Z, then future movies by booking date with A–Z ties. Most shows counts all published sessions.

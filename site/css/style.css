@@ -144,10 +144,6 @@ h1 { margin: 0; font: 700 clamp(40px, 8vw, 76px)/0.9 var(--f-display); letter-sp
   position: relative; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px;
   background: var(--surface); border: 1px solid var(--line); padding: 14px 16px 16px; margin-bottom: 14px;
 }
-.toolbar::before,
-.toolbar::after { content: ""; position: absolute; width: 10px; height: 10px; border: 0 solid var(--line-strong); }
-.toolbar::before { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
-.toolbar::after { right: -1px; bottom: -1px; border-right-width: 2px; border-bottom-width: 2px; }
 
 fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .field { display: block; flex: 1 1 160px; min-width: 0; }
@@ -454,6 +450,7 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
 .time i { font: 500 10px/1 var(--f-mono); font-style: normal; letter-spacing: 0.06em; color: var(--muted); }
 .overnight { display: inline-block; font: 700 11px/1 var(--f-mono); color: var(--ink); padding: 3px 4px; margin-left: 4px; border: 1px solid var(--line); vertical-align: middle; }
 .card-status { margin-top: 6px; color: var(--ink-2); }
+.card-shows { margin-top: 6px; color: var(--ink-2); }
 .concert-choice { display: flex; align-items: center; gap: 8px; min-height: 40px; }
 .concert-choice input { accent-color: var(--ink); width: 18px; height: 18px; }
 a.time:hover { background: var(--band); color: var(--band-ink); border-color: var(--band); border-left-color: var(--accent); }

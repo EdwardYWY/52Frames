@@ -112,6 +112,14 @@ class Showtime:
     def __post_init__(self):
         if not self.movie_key:
             object.__setattr__(self, "movie_key", normalize_title(self.movie_title))
+        aliases = {"action adventure": ("Action", "Adventure"), "drama and romance": ("Drama", "Romance")}
+        genres = []
+        for label in self.genres:
+            for part in str(label).split(","):
+                for genre in aliases.get(part.strip().lower(), (part.strip(),)):
+                    if genre and genre not in genres:
+                        genres.append(genre)
+        object.__setattr__(self, "genres", tuple(genres))
 
     def to_dict(self) -> dict:
         data = asdict(self)

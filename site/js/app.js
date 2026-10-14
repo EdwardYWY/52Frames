@@ -2,14 +2,14 @@
 // manage starred cinemas. Fetching and parsing live in providers.js; grouping and caching in
 // aggregator.js.
 
-import { collectShowtimes, createCache, filterShowtimes, summarizeMovies } from "./aggregator.js?v=3";
-import { REGIONS, distanceKm, normalizeTitle, todayMyt } from "./models.js?v=3";
-import { TGV_LOCATIONS } from "./places.js?v=3";
-import { createProviders, domParseXml } from "./providers.js?v=3";
-import { enhanceSelect } from "./select.js?v=3";
-import { collectCatalogue } from "./catalog.js?v=3";
-import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=3";
-import { loadSnapshot } from "./snapshot.js?v=3";
+import { collectShowtimes, createCache, filterShowtimes, summarizeMovies } from "./aggregator.js?v=4";
+import { REGIONS, distanceKm, normalizeTitle, todayMyt } from "./models.js?v=4";
+import { TGV_LOCATIONS } from "./places.js?v=4";
+import { createProviders, domParseXml } from "./providers.js?v=4";
+import { enhanceSelect } from "./select.js?v=4";
+import { collectCatalogue } from "./catalog.js?v=4";
+import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=4";
+import { loadSnapshot } from "./snapshot.js?v=4";
 
 const $ = (id) => document.getElementById(id);
 const providers = createProviders();
@@ -651,7 +651,7 @@ function movieCard(summary) {
       "a",
       { class: "card", href: `#/movie/${encodeURIComponent(summary.key)}` },
       posterFrame(summary, GRID_SIZES),
-      el("div", { class: "card-body" }, el("h3"), el("div", { class: "card-status mono" }), el("div", { class: "card-meta mono" })),
+      el("div", { class: "card-body" }, el("h3"), el("div", { class: "card-shows mono" }), el("div", { class: "card-status mono" }), el("div", { class: "card-meta mono" })),
     );
     cards.set(summary.key, card);
   }
@@ -665,6 +665,7 @@ function movieCard(summary) {
   card.classList.remove("later");
   card.dataset.next = summary.nextDate;
   card.querySelector(".card-status").textContent = screeningLabel(summary.nextDate, todayMyt());
+  card.querySelector(".card-shows").textContent = plural(summary.showCount, "show");
   card.querySelector("h3").textContent = summary.title;
   card.querySelector(".card-meta").textContent = [runtime(summary.duration_mins), summary.rating, summary.language]
     .filter(Boolean)
@@ -691,7 +692,6 @@ function renderGrid() {
   const movies = browseMovies(visible, { today: todayMyt(), sort: $("sort").value });
   for (const m of movies) state.lastSummary.set(m.key, m);
   $("count").textContent = `${plural(movies.length, "movie")} · ${plural(new Set(visible.map(venueKey)).size, "cinema")}`;
-  $("intro-date").textContent = `Now showing + advance sales · ${regionLabel()}`;
   $("grid").replaceChildren(...(movies.length ? movies.map(m => movieCard(m)) : [el("p", { class: "empty" }, view.loading ? "Loading movies and advance sales…" : "No movies match these filters.")]));
 }
 
@@ -824,6 +824,7 @@ function renderSheet() {
         ["Runtime", runtime(summary.duration_mins)],
         ["Rating", summary.rating],
         ["Language", summary.language],
+        ["Genres", [...new Set(all.flatMap(s => s.genres || []))].join(", ")],
         ...Object.entries(summary.byChain || {}).map(subtitleRow),
         ["Region", regionLabel()],
       ].filter(([, v]) => v)

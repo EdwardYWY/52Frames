@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeShowtime } from '../../site/js/models.js';
+import { makeShowtime, normalizeGenres } from '../../site/js/models.js';
 import { browseMovies, isConcert, screeningLabel, overnightLabel } from '../../site/js/browse.js';
 
 const show = (title, day, time = '20:00', extra = {}) => makeShowtime({ movie_title: title, business_date: day, start: `${day}T${time}`, ...extra });
@@ -15,6 +15,10 @@ test('concert classification keeps musicals and ordinary live/fan events', () =>
   assert.equal(isConcert({ genres: ['Live Event'], tags: ['Concert / Live'] }), true);
   assert.equal(isConcert({ genres: ['Musical'] }), false);
   assert.equal(isConcert({ genres: ['Live Event', 'Action'], tags: ['Fans Party'] }), false);
+});
+test('compound and repeated genres from both chains collapse into unique labels', () => {
+  assert.deepEqual(normalizeGenres(['Action Adventure', 'Action', 'Adventure', 'Sci-Fi']), ['Action', 'Adventure', 'Sci-Fi']);
+  assert.deepEqual(normalizeGenres(['Musical', 'Drama and Romance', 'Drama']), ['Musical', 'Drama', 'Romance']);
 });
 test('midnight retains previous booking date and adds +1 in previews', () => {
   const late = show('Doomsday', '2026-12-16', '00:05', { start: '2026-12-17T00:05' });
