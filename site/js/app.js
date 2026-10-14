@@ -2,14 +2,14 @@
 // manage starred cinemas. Fetching and parsing live in providers.js; grouping and caching in
 // aggregator.js.
 
-import { collectShowtimes, createCache, filterShowtimes, summarizeMovies, uniqueShows } from "./aggregator.js?v=8";
-import { REGIONS, movieGroupKey, distanceKm, normalizeLanguage, normalizeTitle, todayMyt } from "./models.js?v=8";
-import { TGV_LOCATIONS, TGV_NAMES } from "./places.js?v=8";
-import { createProviders, domParseXml } from "./providers.js?v=8";
-import { enhanceSelect } from "./select.js?v=8";
-import { collectCatalogue } from "./catalog.js?v=8";
-import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=8";
-import { loadSnapshot } from "./snapshot.js?v=8";
+import { collectShowtimes, createCache, filterShowtimes, summarizeMovies, uniqueShows } from "./aggregator.js?v=9";
+import { REGIONS, movieGroupKey, distanceKm, normalizeLanguage, normalizeTitle, todayMyt } from "./models.js?v=9";
+import { TGV_LOCATIONS, TGV_NAMES } from "./places.js?v=9";
+import { createProviders, domParseXml } from "./providers.js?v=9";
+import { enhanceSelect } from "./select.js?v=9";
+import { collectCatalogue } from "./catalog.js?v=9";
+import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=9";
+import { loadSnapshot } from "./snapshot.js?v=9";
 
 const $ = (id) => document.getElementById(id);
 const providers = createProviders();
@@ -84,6 +84,26 @@ const venueKey = (s) => `${s.chain}|${s.cinema_name}`;
 const splitKey = (key) => [key.slice(0, key.indexOf("|")), key.slice(key.indexOf("|") + 1)];
 const isStarred = (key) => state.starred.has(key);
 
+// The main page's shows and the snapshot hold every day (~20k shows) and are looked up by movie
+// and by day on every render. Index each list once, the first time it's asked.
+const indexes = new WeakMap();
+function indexOf(shows) {
+  let index = indexes.get(shows);
+  if (!index || index.size !== shows.length) {
+    index = { size: shows.length, byMovie: new Map(), byDay: new Map() };
+    const add = (map, key, show) => (map.get(key) || map.set(key, []).get(key)).push(show);
+    for (const show of shows) {
+      add(index.byMovie, movieGroupKey(show), show);
+      add(index.byDay, show.business_date, show);
+    }
+    indexes.set(shows, index);
+  }
+  return index;
+}
+
+/** The booking dates a movie has in `shows`, among those passing `keep`, in order. */
+const movieDates = (shows, key, keep) => [...new Set((indexOf(shows).byMovie.get(key) || []).filter(keep).map((s) => s.business_date))].sort();
+
 // TGV cinemas used to be named "TGV <mall>"; stars saved under those names move to the new ones.
 const OLD_TGV_IDS = {
   "Tgv Ksl Klang (New)": "KSL",
@@ -155,7 +175,15 @@ function runtime(mins) {
   return mins >= 60 ? `${Math.floor(mins / 60)}h ${pad2(mins % 60)}m` : `${mins}m`;
 }
 
+// Formatting dates is slow (Intl), and the date strip asks for the same few dozen on every render.
+const datePartsCache = new Map();
 function dateParts(iso) {
+  let parts = datePartsCache.get(iso);
+  if (!parts) datePartsCache.set(iso, (parts = formatDateParts(iso)));
+  return parts;
+}
+
+function formatDateParts(iso) {
   const d = new Date(`${iso}T00:00:00Z`);
   const fmt = (opts) => d.toLocaleDateString("en-GB", { ...opts, timeZone: "UTC" });
   return {
@@ -414,8 +442,7 @@ function posterFrame(summary, sizes) {
 const regionOf = (view) => (view === state.sheet ? $("m-region") : $("region")).value;
 const emptyKey = (view) => `${view.date}|${regionOf(view)}`;
 function renderDateStrip(strip, name, date) {
-  const atCinema = matchesCinema($("cinema"));
-  const dates = [...new Set(state.main.shows.filter(s => movieGroupKey(s) === state.movieKey && atCinema(s)).map(s => s.business_date))].sort();
+  const dates = movieDates(state.main.shows, state.movieKey, matchesCinema($("cinema")));
   if (!dates.includes(date)) dates.push(date);
   dates.sort();
   strip.replaceChildren(...dates.map(iso => {
@@ -568,12 +595,14 @@ async function load(view = state.main) {
   const snap = await snapshotOnce();
   if (!current()) return;
   if (snap && view === state.sheet) {
-    const dates = [...new Set(snap.showtimes.filter(s => movieGroupKey(s) === state.movieKey && inScope(s.chain, s.region, chains, region) && matchesCinema($("m-cinema"))(s)).map(s => s.business_date))].sort();
+    const atCinema = matchesCinema($("m-cinema"));
+    const dates = movieDates(snap.showtimes, state.movieKey, (s) => inScope(s.chain, s.region, chains, region) && atCinema(s));
     if (dates.length && !dates.includes(view.date)) view.date = dates[0];
   }
   if (snap && (view === state.main || snap.days.includes(view.date))) {
     view.cinemas = snap.cinemas.filter((c) => inScope(c.chain, c.region, chains, region));
-    view.shows = snap.showtimes.filter((s) => (view === state.main || s.business_date === view.date) && inScope(s.chain, s.region, chains, region));
+    const pool = view === state.main ? snap.showtimes : indexOf(snap.showtimes).byDay.get(view.date) || [];
+    view.shows = pool.filter((s) => inScope(s.chain, s.region, chains, region));
     view.errors = (snap.errors[date] || []).filter((e) =>
       /could not load cinemas/.test(e) ? chains.some((c) => e.startsWith(c)) : view.cinemas.some((c) => e.startsWith(`${c.chain} ${c.name}:`)),
     );
@@ -601,7 +630,7 @@ async function load(view = state.main) {
     }
     // The main page already has this day when its region covers the movie view's.
     const covered = !regionOf(state.main) || regionOf(state.main) === region;
-    const available = covered ? state.main.shows.filter(s => s.business_date === date && inScope(s.chain, s.region, chains, region)) : [];
+    const available = covered ? (indexOf(state.main.shows).byDay.get(date) || []).filter((s) => inScope(s.chain, s.region, chains, region)) : [];
     if (available.length && !state.main.loading) {
       view.shows = available;
       view.cinemas = state.main.cinemas.filter((c) => inScope(c.chain, c.region, chains, region));
@@ -756,14 +785,29 @@ function matchesSearch(show, query) {
   return normalizeLanguage(raw).toLowerCase() === language || language.startsWith(raw) || language.split(/[\s/]+/).some((w) => w.startsWith(raw));
 }
 
+// What the grid was last drawn from: render() runs on every change, including ones in the movie
+// view, and rebuilding ~150 cards from ~20k shows each time made the movie view lag.
+let gridDrawn = { shows: null, sig: "" };
+let titlesOf = { shows: null, titles: new Map() };
+
 function renderGrid() {
   const view = state.main;
+  const sig = JSON.stringify([
+    view.shows.length, view.cinemas.length, view.loading, chosenCinemas($("cinema")), searchText(), $("hide-concerts").checked,
+    $("sort").value, todayMyt(), [...state.starred.keys()], state.here, state.places.size,
+  ]);
+  if (gridDrawn.shows === view.shows && gridDrawn.sig === sig) return;
+  gridDrawn = { shows: view.shows, sig };
   const keys = view.cinemas.length ? view.cinemas.map(c => `${c.chain}|${c.name}`) : [...new Set(view.shows.map(venueKey))];
   fillCinemaSelect($("cinema"), keys, "All cinemas");
   const atCinema = matchesCinema($("cinema"));
-  const visible = view.shows.filter(s => atCinema(s) && matchesSearch(s, searchText()) && (!$("hide-concerts").checked || !isConcert(s)));
+  const query = searchText();
+  const hideConcerts = $("hide-concerts").checked;
+  const visible = view.shows.filter(s => atCinema(s) && matchesSearch(s, query) && (!hideConcerts || !isConcert(s)));
   const movies = browseMovies(visible, { today: todayMyt(), sort: $("sort").value });
-  const titles = new Map(summarizeMovies(view.shows).map(m => [m.key, m.title]));
+  // Titles come from every show (not just the visible ones), so they only change with the data.
+  if (titlesOf.shows !== view.shows) titlesOf = { shows: view.shows, titles: new Map(summarizeMovies(view.shows).map(m => [m.key, m.title])) };
+  const { titles } = titlesOf;
   for (const movie of movies) movie.title = titles.get(movie.key) || movie.title;
   for (const m of movies) state.lastSummary.set(m.key, m);
   $("count").textContent = `${plural(movies.length, "movie")} · ${plural(new Set(visible.map(venueKey)).size, "cinema")}`;
@@ -983,7 +1027,7 @@ function route() {
   if (opening) {
     $("m-region").value = $("region").value;
     $("to-top").hidden = true;
-    state.sheet.date = state.pendingSheetDate || [...new Set(state.main.shows.filter(s => movieGroupKey(s) === key && matchesCinema($("cinema"))(s)).map(s => s.business_date))].sort()[0] || todayMyt();
+    state.sheet.date = state.pendingSheetDate || movieDates(state.main.shows, key, matchesCinema($("cinema")))[0] || todayMyt();
     state.pendingSheetDate = null;
     load(state.sheet);
     returnFocus = document.activeElement;

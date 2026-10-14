@@ -28,15 +28,25 @@ export function normalizeTitle(title) {
  * One name per language, whichever chain it came from: GSC sends codes ("IND", "BM"), TGV full
  * names ("Bahasa Indonesia"). Movies are grouped by this, so both must map to the same name.
  */
+const LANGUAGE_ALIASES = { eng: 'English', english: 'English', tam: 'Tamil', tamil: 'Tamil', hin: 'Hindi', hindi: 'Hindi', chi: 'Chinese', chinese: 'Chinese', man: 'Mandarin', mandarin: 'Mandarin', bm: 'Malay', malay: 'Malay', 'bahasa melayu': 'Malay', ind: 'Bahasa Indonesia', indonesian: 'Bahasa Indonesia', 'bahasa indonesia': 'Bahasa Indonesia', can: 'Cantonese', cantonese: 'Cantonese', tha: 'Thai', thai: 'Thai', tel: 'Telugu', telugu: 'Telugu', mal: 'Malayalam', malayalam: 'Malayalam', jpn: 'Japanese', japanese: 'Japanese', kor: 'Korean', korean: 'Korean' };
+
 export function normalizeLanguage(language) {
   const value = String(language || '').trim();
-  const aliases = { eng: 'English', english: 'English', tam: 'Tamil', tamil: 'Tamil', hin: 'Hindi', hindi: 'Hindi', chi: 'Chinese', chinese: 'Chinese', man: 'Mandarin', mandarin: 'Mandarin', bm: 'Malay', malay: 'Malay', 'bahasa melayu': 'Malay', ind: 'Bahasa Indonesia', indonesian: 'Bahasa Indonesia', 'bahasa indonesia': 'Bahasa Indonesia', can: 'Cantonese', cantonese: 'Cantonese', tha: 'Thai', thai: 'Thai', tel: 'Telugu', telugu: 'Telugu', mal: 'Malayalam', malayalam: 'Malayalam', jpn: 'Japanese', japanese: 'Japanese', kor: 'Korean', korean: 'Korean' };
-  return aliases[value.toLowerCase()] || value;
+  return LANGUAGE_ALIASES[value.toLowerCase()] || value;
 }
 
+// Shows are never changed once made, so each one's key is worked out once: the page asks for it
+// tens of thousands of times per render (a snapshot holds ~20k shows).
+const groupKeys = new WeakMap();
+
 export function movieGroupKey(show) {
-  const language = normalizeLanguage(show.language).toLowerCase();
-  return `${show.movie_key}${language ? `|${language}` : ''}`;
+  let key = groupKeys.get(show);
+  if (key === undefined) {
+    const language = normalizeLanguage(show.language).toLowerCase();
+    key = `${show.movie_key}${language ? `|${language}` : ''}`;
+    groupKeys.set(show, key);
+  }
+  return key;
 }
 
 export function normalizeGenres(genres) {

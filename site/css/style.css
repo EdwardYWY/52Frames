@@ -419,7 +419,7 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
 .m-status.on { display: block; font: 11px var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 10px; }
 
 /* Cinema blocks: collapsed by default, summary carries the useful bits. */
-.venue { border: 1px solid var(--line); background: var(--bg); margin-bottom: 6px; }
+.venue { border: 1px solid var(--line); background: var(--bg); margin-bottom: 6px; content-visibility: auto; contain-intrinsic-size: auto 64px; }
 .venue summary {
   display: grid; grid-template-columns: 30px minmax(0, 1fr) auto 18px; align-items: center; gap: 4px 10px;
   padding: 8px 12px 8px 6px; cursor: pointer; list-style: none;
@@ -477,6 +477,8 @@ a.time:hover i, a.time:hover .overnight { color: var(--accent); }
 .trow {
   display: grid; grid-template-columns: 100px minmax(0, 1fr) auto 76px; align-items: center; gap: 4px 14px;
   padding: 10px 8px; border-bottom: 1px solid var(--line); color: var(--ink); text-decoration: none;
+  /* A busy movie has hundreds of rows: skip laying out and painting the ones off screen. */
+  content-visibility: auto; contain-intrinsic-size: auto 46px;
 }
 a.trow:hover { background: var(--band); color: var(--band-ink); }
 .trow.starred { background-image: var(--star-bg); }
