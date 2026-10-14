@@ -244,12 +244,16 @@ test("GSC seat map: finds the hall, then reads its seats", async () => {
   const plan = parseGscSeatPlan(fixture("gsc_seats_120_hall5.xml"), parseXml);
   assert.equal(plan.total, 112);
   assert.equal(plan.free, 108, "two sold, two house seats");
-  assert.deepEqual(plan.rows.map((r) => r.label), ["A", "B", "C", "D", "E", "F", "G", "H"], "front row first");
-  assert.equal(plan.rows[0].seats[0].number, "A01");
-  assert.equal(plan.rows[0].seats[2], null, "aisle");
-  assert.equal(plan.rows[1].seats[5].number, "B05");
-  assert.equal(plan.rows[1].seats[5].state, "sold");
-  assert.equal(plan.rows[3].seats[14].state, "blocked", "house seat");
+  // As GSC draws it: the row nearest the screen (smallest y) first, here H; A at the back.
+  assert.deepEqual(plan.rows.map((r) => r.label), ["H", "G", "F", "E", "D", "C", "B", "A"]);
+  const row = (label) => plan.rows.find((r) => r.label === label);
+  assert.equal(row("A").seats[0].number, "A01");
+  assert.equal(row("A").seats[2], null, "aisle");
+  assert.equal(row("B").seats[5].number, "B05");
+  assert.equal(row("B").seats[5].state, "sold");
+  assert.equal(row("D").seats[14].state, "blocked", "house seat");
+  assert.equal(row("A").seats[14].oku, true, "wheelchair space");
+  assert.equal(row("A").seats[14].state, "free");
 
   const calls = [];
   const fakeFetch = async (url) => {

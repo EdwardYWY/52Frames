@@ -40,7 +40,10 @@ export function seatGrid(plan) {
       el("span", { class: "seat-row" }, row.label),
       row.seats.map((seat, i) =>
         seat
-          ? el("span", { class: `seat ${seat.state}${seat.pair ? " pair" : ""}${side[i] || ""}`, title: `${seat.number} · ${STATE_LABEL[seat.state]}` })
+          ? el("span", {
+              class: `seat ${seat.state}${seat.pair ? " pair" : ""}${seat.oku ? " oku" : ""}${side[i] || ""}`,
+              title: `${seat.number}${seat.oku ? " · OKU" : ""} · ${STATE_LABEL[seat.state]}`,
+            })
           : el("span", { class: "seat-gap" }),
       ),
       el("span", { class: "seat-row" }, row.label),
@@ -191,6 +194,7 @@ export function enableSeatPreview(root, { selector, showFor, fetchPlan }) {
             el("span", {}, el("i", { class: "seat blocked" }), "Unavailable"),
             // Twin and sofa seats are sold in pairs; only shown when the hall has them.
             plan.rows.some((row) => row.seats.some((seat) => seat?.pair)) ? el("span", {}, el("i", { class: "seat twin" }), "Twin seat") : null,
+            plan.rows.some((row) => row.seats.some((seat) => seat?.oku)) ? el("span", {}, el("i", { class: "seat free oku" }), "OKU") : null,
             el("span", { class: "seat-when" }, `Live from ${show.chain} · ${clock()}`),
           ),
         );
