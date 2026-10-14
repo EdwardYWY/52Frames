@@ -2,15 +2,15 @@
 // manage starred cinemas. Fetching and parsing live in providers.js; grouping and caching in
 // aggregator.js.
 
-import { collectShowtimes, createCache, filterShowtimes, summarizeMovies, uniqueShows } from "./aggregator.js?v=14";
-import { REGIONS, movieGroupKey, distanceKm, normalizeLanguage, normalizeTitle, todayMyt } from "./models.js?v=14";
-import { TGV_LOCATIONS, TGV_NAMES } from "./places.js?v=14";
-import { createProviders, domParseXml } from "./providers.js?v=14";
-import { enhanceSelect } from "./select.js?v=14";
-import { collectCatalogue } from "./catalog.js?v=14";
-import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=14";
-import { loadSnapshot } from "./snapshot.js?v=14";
-import { enableSeatPreview } from "./seatmap.js?v=14";
+import { collectShowtimes, createCache, filterShowtimes, summarizeMovies, uniqueShows } from "./aggregator.js?v=15";
+import { REGIONS, movieGroupKey, distanceKm, normalizeLanguage, normalizeTitle, todayMyt } from "./models.js?v=15";
+import { TGV_LOCATIONS, TGV_NAMES } from "./places.js?v=15";
+import { createProviders, domParseXml } from "./providers.js?v=15";
+import { enhanceSelect } from "./select.js?v=15";
+import { collectCatalogue } from "./catalog.js?v=15";
+import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=15";
+import { loadSnapshot } from "./snapshot.js?v=15";
+import { enableSeatPreview } from "./seatmap.js?v=15";
 
 const $ = (id) => document.getElementById(id);
 const providers = createProviders();
