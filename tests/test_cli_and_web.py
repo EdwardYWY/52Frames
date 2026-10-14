@@ -107,5 +107,21 @@ class WebApiTest(unittest.TestCase):
         self.assertEqual(status, 404)
 
 
+class StaticFilesTest(unittest.TestCase):
+    def test_serves_the_browser_site_when_present(self):
+        self.assertEqual(web.resolve_static("/"), web.SITE_DIR / "index.html")
+        self.assertEqual(web.resolve_static("/js/providers.js"), web.SITE_DIR / "js" / "providers.js")
+
+    def test_refuses_paths_outside_the_site(self):
+        self.assertIsNone(web.resolve_static("/../README.md"))
+        self.assertIsNone(web.resolve_static("/%2e%2e/cinema_showtimes/web.py"))
+        self.assertIsNone(web.resolve_static("/missing.js"))
+
+    def test_falls_back_to_the_packaged_page(self):
+        missing = web.SITE_DIR / "does-not-exist"
+        self.assertEqual(web.resolve_static("/", missing), web.STATIC_DIR / "index.html")
+        self.assertIsNone(web.resolve_static("/js/app.js", missing))
+
+
 if __name__ == "__main__":
     unittest.main()

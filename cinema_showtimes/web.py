@@ -8,12 +8,24 @@ import time
 from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from .aggregator import Result, collect_showtimes, filter_showtimes, list_cinemas
 from .models import REGIONS, today_myt
 
 STATIC_DIR = Path(__file__).parent / "static"
+# The browser-only site (also deployed to GitHub Pages). Present in a repo checkout, not when
+# installed with pip; then the older page in static/ (which uses /api/showtimes) is served.
+SITE_DIR = Path(__file__).resolve().parent.parent / "site"
+CONTENT_TYPES = {
+    ".html": "text/html; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".json": "application/json",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".ico": "image/x-icon",
+}
 CACHE_TTL_SECONDS = 10 * 60
 
 _cache: dict[tuple, tuple[float, Result]] = {}
@@ -73,6 +85,22 @@ def handle_api(path: str, params: dict[str, list[str]], collect=cached_collect) 
     return 404, {"error": "not found"}
 
 
+def resolve_static(url_path: str, site_dir: Path = SITE_DIR) -> Path | None:
+    """Map a URL path to a file to serve, refusing anything outside the site folder."""
+    if not (site_dir / "index.html").is_file():
+        return STATIC_DIR / "index.html" if url_path in ("/", "/index.html") else None
+    relative = unquote(url_path).lstrip("/") or "index.html"
+    root = site_dir.resolve()
+    target = (root / relative).resolve()
+    if target.is_dir():
+        target = target / "index.html"
+    if not target.is_relative_to(root) or not target.is_file():
+        return None
+    if target.suffix.lower() not in CONTENT_TYPES:
+        return None
+    return target
+
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, status: int, body: bytes, content_type: str) -> None:
         self.send_response(status)
@@ -83,14 +111,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         url = urlparse(self.path)
-        if url.path in ("/", "/index.html"):
-            self._send(200, (STATIC_DIR / "index.html").read_bytes(), "text/html; charset=utf-8")
-            return
         if url.path.startswith("/api/"):
             status, body = handle_api(url.path, parse_qs(url.query))
             self._send(status, json.dumps(body).encode("utf-8"), "application/json")
             return
-        self._send(404, b"Not found", "text/plain")
+        target = resolve_static(url.path)
+        if target is None:
+            self._send(404, b"Not found", "text/plain")
+            return
+        self._send(200, target.read_bytes(), CONTENT_TYPES[target.suffix.lower()])
 
 
 def serve(host: str = "127.0.0.1", port: int = 8000) -> None:
