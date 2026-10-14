@@ -2,6 +2,7 @@
 // Ports cinema_showtimes/aggregator.py, plus a sessionStorage cache for the browser.
 
 export const CONCURRENCY = 6;
+import { movieGroupKey, normalizeLanguage } from './models.js?v=6';
 export const CACHE_TTL_MS = 10 * 60 * 1000;
 // Bump when the cached shape of a showtime changes.
 const CACHE_PREFIX = "showtimes:v3:";
@@ -45,10 +46,11 @@ export function filterShowtimes(showtimes, { chains, region, cinema, movie, afte
 /** Map of movie_key -> shows, keys in sorted order, shows by start time. */
 export function groupByMovie(showtimes) {
   const groups = new Map();
-  const sorted = [...showtimes].sort((a, b) => cmp(a.movie_key, b.movie_key) || cmp(a.start, b.start));
+  const sorted = [...showtimes].sort((a, b) => cmp(movieGroupKey(a), movieGroupKey(b)) || cmp(a.start, b.start));
   for (const show of sorted) {
-    if (!groups.has(show.movie_key)) groups.set(show.movie_key, []);
-    groups.get(show.movie_key).push(show);
+    const key = movieGroupKey(show);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(show);
   }
   return groups;
 }
@@ -78,7 +80,7 @@ export function summarizeMovies(showtimes) {
       title: shows.map((s) => s.movie_title).sort((a, b) => a.length - b.length || cmp(a, b))[0],
       duration_mins: withRuntime.duration_mins,
       rating: shows.find((s) => s.rating)?.rating || "",
-      language: shows.find((s) => s.language)?.language || "",
+      language: normalizeLanguage(shows.find((s) => s.language)?.language),
       chains: [...new Set(shows.map((s) => s.chain))].sort(),
       showCount: shows.length,
       cinemaCount: new Set(shows.map((s) => `${s.chain}|${s.cinema_name}`)).size,

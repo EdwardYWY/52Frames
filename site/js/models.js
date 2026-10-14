@@ -25,6 +25,17 @@ export function normalizeTitle(title) {
 }
 
 /** Same field names as Showtime.to_dict() in Python. `start` is "YYYY-MM-DDTHH:MM" (MYT). */
+export function normalizeLanguage(language) {
+  const value = String(language || '').trim();
+  const aliases = { eng: 'English', english: 'English', tam: 'Tamil', tamil: 'Tamil', hin: 'Hindi', hindi: 'Hindi', chi: 'Chinese', chinese: 'Chinese', man: 'Mandarin', mandarin: 'Mandarin', bm: 'Malay', malay: 'Malay', 'bahasa melayu': 'Malay', jpn: 'Japanese', japanese: 'Japanese', kor: 'Korean', korean: 'Korean' };
+  return aliases[value.toLowerCase()] || value;
+}
+
+export function movieGroupKey(show) {
+  const language = normalizeLanguage(show.language).toLowerCase();
+  return `${show.movie_key}${language ? `|${language}` : ''}`;
+}
+
 export function normalizeGenres(genres) {
   const aliases = { 'action adventure': ['Action', 'Adventure'], 'drama and romance': ['Drama', 'Romance'] };
   return [...new Set((genres || []).flatMap(label => String(label).split(',').flatMap(part => aliases[part.trim().toLowerCase()] || [part.trim()])).filter(Boolean))];
