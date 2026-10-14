@@ -31,6 +31,7 @@ test("GSC: parses locations with region and hall group", () => {
   assert.equal(queensbay.hall_group, "");
   assert.equal(aurum.region, "Klang Valley");
   assert.equal(aurum.hall_group, "AURUMTRX");
+  assert.deepEqual([queensbay.latitude, queensbay.longitude], [5.33306, 100.30667]);
 });
 
 test("GSC: parses every show", () => {
@@ -52,6 +53,12 @@ test("GSC: show fields", () => {
   assert.equal(first.language, "MAN");
   assert.equal(first.sold_out, false);
   assert.match(first.booking_url, /showtime-by-movies\/6495/);
+});
+
+test("GSC: posters come from the child film", () => {
+  const first = gscShows()[0];
+  assert.equal(first.poster_url, "https://poster.gsc.com.my/2026/261012_GoForBroke2_big.jpg");
+  assert.equal(first.poster_small_url, "https://poster.gsc.com.my/2026/261012_GoForBroke2_med.jpg");
 });
 
 test("GSC: after-midnight show keeps its business date", () => {
@@ -106,6 +113,19 @@ test("TGV: show fields", () => {
   assert.equal(indulge.rating, "16");
   assert.equal(indulge.language, "English");
   assert.equal(indulge.booking_url, "https://www.tgv.com.my/movies/details/other-mommy");
+});
+
+test("TGV: the poster asset is used, missing ones are blank", () => {
+  const mommy = tgvShows().find((s) => s.movie_title === "Other Mommy");
+  assert.ok(mommy.poster_url.endsWith("d1d22010-1a21-4f66-b272-39d8727fed90.jpg"));
+  assert.equal(mommy.poster_small_url, "");
+  assert.equal(tgvShows().find((s) => s.movie_title === "Digger").poster_url, "");
+});
+
+test("TGV: cinema location comes from the map link", () => {
+  const first = tgvShows()[0];
+  assert.ok(Math.abs(first.latitude - 3.1489607) < 1e-6);
+  assert.ok(Math.abs(first.longitude - 101.7134125) < 1e-6);
 });
 
 test("TGV: blank runtime becomes null", () => {

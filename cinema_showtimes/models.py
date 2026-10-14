@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta, timezone
@@ -27,6 +28,14 @@ def normalize_title(title: str) -> str:
     return _NON_ALNUM_RE.sub(" ", " ".join(latin_words)).strip()
 
 
+def float_or_none(value) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
 def today_myt() -> date:
     return datetime.now(MYT).date()
 
@@ -40,6 +49,8 @@ class Cinema:
     state: str = ""
     # GSC premium venues (Aurum, Velvet, ...) need their hall group to list shows.
     hall_group: str = ""
+    latitude: float | None = None
+    longitude: float | None = None
 
 
 @dataclass(frozen=True)
@@ -58,6 +69,12 @@ class Showtime:
     language: str = ""
     sold_out: bool = False
     booking_url: str = ""
+    # Largest poster this chain offers, and a smaller one if it has one.
+    poster_url: str = ""
+    poster_small_url: str = ""
+    # Where the cinema is, when the chain says (GSC: cinema list; TGV: map link per cinema).
+    latitude: float | None = None
+    longitude: float | None = None
     movie_key: str = field(default="", compare=False)
 
     def __post_init__(self):

@@ -13,7 +13,7 @@ from datetime import date, datetime
 from urllib.parse import quote
 
 from . import http
-from .models import Cinema, Showtime
+from .models import Cinema, Showtime, float_or_none
 
 CHAIN = "GSC"
 API_BASE = "https://epaymentapi.gsc.com.my"
@@ -31,6 +31,8 @@ def parse_cinemas(payload: dict) -> list[Cinema]:
             name=loc.get("EpaymentName") or loc.get("CinemaName", ""),
             region=loc.get("Region", ""),
             hall_group=loc.get("HallGroup") or "",
+            latitude=float_or_none(loc.get("Latitude")),
+            longitude=float_or_none(loc.get("Longitude")),
         )
         for loc in locations
         if not loc.get("IsEpayHidden")
@@ -79,6 +81,10 @@ def parse_showtimes(xml_text: str, cinema: Cinema) -> list[Showtime]:
                             language=child.get("lang", ""),
                             sold_out=show.get("hallfull") == "1",
                             booking_url=booking_url,
+                            poster_url=child.get("thumb_big", ""),
+                            poster_small_url=child.get("thumb_medium", ""),
+                            latitude=cinema.latitude,
+                            longitude=cinema.longitude,
                         )
                     )
     return shows

@@ -60,9 +60,25 @@ longer than one region (about 10 s for Klang Valley).
 ## Website (GitHub Pages)
 
 <https://edwardywy.github.io/52Frames/> is a static page in [`site/`](site/): plain ES modules, no
-build step, no dependencies. Pick a date (today + 6 days) and region, then filter by movie, cinema or
-start time as you type. Each time links to that chain's booking page; sold-out times are struck
-through, and shows after midnight are marked `+1` under the day they belong to.
+build step, no dependencies.
+
+- **Now showing**: a poster grid of every movie in the chosen region and day. Dropdowns for date,
+  region, cinema (including **★ Starred**) and sort; GSC/TGV toggles.
+- **Movie view** (tap a poster; the back button or Esc returns to the grid): a date strip, the
+  schedule **by cinema** (collapsed rows with the next times; starred cinemas always first; sort by
+  earliest show, nearest, name or most shows) or **by time** (one list of every show), plus cinema
+  and start-time dropdowns. Each time links to the chain's booking page, where seats are chosen.
+  Sold-out times are struck through, started ones dimmed, after-midnight ones marked `+1`.
+- **Posters** come from both chains; when both have one, the higher-resolution one is used where
+  it matters (GSC's 500 px poster in the movie view) and the browser picks a lighter one for the grid.
+- **Location** (optional, top bar): shows the distance to each cinema and enables "Nearest". GSC
+  sends cinema coordinates; TGV's are in `site/js/places.js` (looked up once from OpenStreetMap,
+  © OpenStreetMap contributors), because TGV's own map links are missing or wrong for many cinemas.
+- **Starred cinemas** (top bar → Starred): star or unstar any cinema, clear all. Stars, location
+  on/off and the last region are kept in this browser's `localStorage`; nothing is sent anywhere.
+
+Live seat maps aren't shown: the endpoints used only say whether a show is sold out, and seat maps
+sit behind each chain's booking session.
 
 How it works:
 
@@ -80,10 +96,11 @@ allows any origin. No other endpoints are used.
 site/
   index.html        the page
   css/style.css
-  js/models.js      normalizeTitle, showtime shape (port of models.py)
+  js/models.js      normalizeTitle, showtime shape, distance (port of models.py)
+  js/places.js      TGV cinema coordinates
   js/providers.js   GSC + TGV fetch and parse (port of gsc.py / tgv.py); no DOM access
   js/aggregator.js  concurrency limit, sessionStorage cache, filter, group (port of aggregator.py)
-  js/app.js         page code
+  js/app.js         page code: grid, movie view, stars, location
 ```
 
 `.github/workflows/pages.yml` runs the Python and JavaScript tests on every push and pull request,

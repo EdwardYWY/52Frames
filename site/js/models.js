@@ -41,6 +41,10 @@ export function makeShowtime(fields) {
     language: "",
     sold_out: false,
     booking_url: "",
+    poster_url: "",
+    poster_small_url: "",
+    latitude: null,
+    longitude: null,
     movie_key: "",
     ...fields,
   };
@@ -67,4 +71,22 @@ export function addDays(isoDate, days) {
   const d = new Date(`${isoDate}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
+}
+
+/** Python's float(value) when finite, else null. */
+export function floatOrNull(value) {
+  if (value === null || value === undefined || typeof value === "boolean") return null;
+  if (typeof value === "string" && !value.trim()) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+/** Great-circle distance in km between two {latitude, longitude} points, or null. */
+export function distanceKm(a, b) {
+  if (a?.latitude == null || a?.longitude == null || b?.latitude == null || b?.longitude == null) return null;
+  const rad = (deg) => (deg * Math.PI) / 180;
+  const dLat = rad(b.latitude - a.latitude);
+  const dLng = rad(b.longitude - a.longitude);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)));
 }
