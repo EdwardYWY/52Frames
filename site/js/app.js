@@ -2,14 +2,15 @@
 // manage starred cinemas. Fetching and parsing live in providers.js; grouping and caching in
 // aggregator.js.
 
-import { collectShowtimes, createCache, filterShowtimes, summarizeMovies, uniqueShows } from "./aggregator.js?v=9";
-import { REGIONS, movieGroupKey, distanceKm, normalizeLanguage, normalizeTitle, todayMyt } from "./models.js?v=9";
-import { TGV_LOCATIONS, TGV_NAMES } from "./places.js?v=9";
-import { createProviders, domParseXml } from "./providers.js?v=9";
-import { enhanceSelect } from "./select.js?v=9";
-import { collectCatalogue } from "./catalog.js?v=9";
-import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=9";
-import { loadSnapshot } from "./snapshot.js?v=9";
+import { collectShowtimes, createCache, filterShowtimes, summarizeMovies, uniqueShows } from "./aggregator.js?v=10";
+import { REGIONS, movieGroupKey, distanceKm, normalizeLanguage, normalizeTitle, todayMyt } from "./models.js?v=10";
+import { TGV_LOCATIONS, TGV_NAMES } from "./places.js?v=10";
+import { createProviders, domParseXml } from "./providers.js?v=10";
+import { enhanceSelect } from "./select.js?v=10";
+import { collectCatalogue } from "./catalog.js?v=10";
+import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=10";
+import { loadSnapshot } from "./snapshot.js?v=10";
+import { enableSeatPreview } from "./seatmap.js?v=10";
 
 const $ = (id) => document.getElementById(id);
 const providers = createProviders();
@@ -825,6 +826,21 @@ function notPublishedText(view) {
 
 // ---------------------------------------------------------------- movie sheet
 
+// Showtimes in the schedule -> their show, for the hold-to-see-seats preview (seatmap.js).
+const seatShows = new WeakMap();
+function allowSeatPreview(node, show) {
+  if (!providers[show.chain]?.fetchSeatPlan || !show.cinema_id) return;
+  seatShows.set(node, show);
+  node.classList.add("seat-hold");
+}
+
+/** A show's live seat plan. GSC's premium halls need the cinema's hall group, which shows don't carry. */
+function fetchSeatPlan(show, signal) {
+  const cinema = [...state.sheet.cinemas, ...state.main.cinemas].find((c) => c.chain === show.chain && c.name === show.cinema_name);
+  return providers[show.chain].fetchSeatPlan({ ...show, hall_group: cinema?.hall_group || "" }, signal);
+}
+let seatPreview = null;
+
 function timeChip(show, now) {
   const overnight = show.start.slice(0, 10) > show.business_date;
   const past = show.start < now;
@@ -839,6 +855,7 @@ function timeChip(show, now) {
     show.experience ? el("i", {}, show.experience) : null,
   );
   if (show.booking_url) Object.assign(chip, { href: show.booking_url, target: "_blank", rel: "noopener" });
+  allowSeatPreview(chip, show);
   return chip;
 }
 
@@ -902,6 +919,7 @@ function timeRow(show, now) {
     el("span", { class: "trow-go mono" }, show.sold_out ? "Sold out" : past ? "Started" : show.booking_url ? "Book ↗" : ""),
   );
   if (show.booking_url) Object.assign(row, { href: show.booking_url, target: "_blank", rel: "noopener" });
+  allowSeatPreview(row, show);
   return row;
 }
 
@@ -1035,6 +1053,7 @@ function route() {
     requestAnimationFrame(() => $("sheet").querySelector(".close").focus({ preventScroll: true }));
   }
   if (!key) {
+    seatPreview?.close();
     sheetKey = null;
     document.title = "52 Frames";
     returnFocus?.focus?.({ preventScroll: true });
@@ -1150,6 +1169,11 @@ async function init() {
       render();
     });
   }
+  seatPreview = enableSeatPreview($("m-schedule"), {
+    selector: ".seat-hold",
+    showFor: (node) => seatShows.get(node),
+    fetchPlan: fetchSeatPlan,
+  });
   $("sheet").addEventListener("click", (e) => {
     if (e.target.closest("[data-close]")) closeSheet();
   });
