@@ -3,9 +3,10 @@
 // aggregator.js.
 
 import { collectShowtimes, createCache, filterShowtimes, summarizeMovies } from "./aggregator.js";
-import { REGIONS, addDays, distanceKm, todayMyt } from "./models.js";
+import { REGIONS, addDays, distanceKm, normalizeTitle, todayMyt } from "./models.js";
 import { TGV_LOCATIONS } from "./places.js";
 import { createProviders } from "./providers.js";
+import { enhanceSelect } from "./select.js";
 import { loadSnapshot } from "./snapshot.js";
 
 const $ = (id) => document.getElementById(id);
@@ -39,13 +40,13 @@ function writeLocal(key, value) {
   }
 }
 
+/** One day of data for one view: the main grid, or the movie view (each has its own date). */
+const newView = (date) => ({ date, shows: [], cinemas: [], errors: [], progress: { done: 0, total: 0 }, loading: false, source: null, controller: null });
+
 const state = {
-  shows: [],
-  cinemas: [],
-  errors: [],
-  progress: { done: 0, total: 0 },
-  loading: false,
-  controller: null,
+  main: newView(todayMyt()),
+  sheet: newView(todayMyt()),
+  pendingSheetDate: null, // a search result opens the movie on the day it next shows
   movieKey: null, // open movie, or null for the grid
   openVenues: new Set(),
   lastSummary: new Map(), // movie key -> last summary, so the sheet keeps its header between dates
@@ -55,7 +56,6 @@ const state = {
   locating: false,
   locationError: "",
   places: new Map(), // venue key -> {latitude, longitude}
-  date: todayMyt(),
   // "date|region" combos that loaded fine but had no shows: not published yet.
   emptyDates: new Set(),
 };
@@ -113,8 +113,7 @@ function savePrefs() {
 }
 
 const selectedChains = () => [...document.querySelectorAll("input[name=chain]:checked")].map((c) => c.value);
-const selectedGroup = () => document.querySelector("input[name=group]:checked")?.value || "cinema";
-const selectedDate = () => state.date;
+const selectedGroup = () => document.querySelector("input[name=group]:checked")?.value || "time";
 const regionLabel = () => $("region").selectedOptions[0].text;
 
 // ---------------------------------------------------------------- distance
@@ -351,7 +350,7 @@ const DAYS = 7;
 const emptyKey = (date) => `${date}|${$("region").value}`;
 
 /** Build or refresh a 7-day strip (today + 6). Days with no schedule yet are marked. */
-function renderDateStrip(strip, name) {
+function renderDateStrip(strip, name, date) {
   if (!strip.childElementCount) {
     for (let i = 0; i < DAYS; i++) {
       const iso = addDays(todayMyt(), i);
@@ -368,24 +367,24 @@ function renderDateStrip(strip, name) {
   }
   for (const label of strip.children) {
     const input = label.querySelector("input");
-    input.checked = input.value === selectedDate();
+    input.checked = input.value === date;
     const empty = state.emptyDates.has(emptyKey(input.value));
     label.classList.toggle("nodata", empty);
     label.title = `${dateParts(input.value).long}${empty ? " · schedule not published yet" : ""}`;
   }
 }
 
-function setDate(iso) {
-  if (iso === state.date) return;
-  state.date = iso;
-  load();
+function setDate(view, iso) {
+  if (iso === view.date) return;
+  view.date = iso;
+  load(view);
 }
 
 function fillAfterOptions() {
   const select = $("m-after");
   const keep = select.value;
   const options = [["", "Any time"]];
-  if (selectedDate() === todayMyt()) options.push(["now", "From now"]);
+  if (state.sheet.date === todayMyt()) options.push(["now", "From now"]);
   for (const t of ["12:00", "15:00", "18:00", "21:00"]) options.push([t, `From ${t}`]);
   select.replaceChildren(...options.map(([v, label]) => new Option(label, v)));
   select.value = options.some(([v]) => v === keep) ? keep : "";
@@ -396,7 +395,7 @@ function fillAfterOptions() {
  * (nearest first when the location is known). Keeps the current choice if it's still listed.
  */
 function fillCinemaSelect(select, keys, allLabel) {
-  const keep = select.value;
+  const keep = new Set(chosenCinemas(select));
   const label = (key) => {
     const km = kmLabel(kmTo(key));
     return km ? `${splitKey(key)[1]} · ${km}` : splitKey(key)[1];
@@ -430,15 +429,48 @@ function fillCinemaSelect(select, keys, allLabel) {
     select.dataset.sig = sig;
     select.replaceChildren(...options);
   }
-  const valid = keep === "" || (keep === STARRED && starred.length) || keys.includes(keep);
-  select.value = valid ? keep : "";
+  // Keep whatever is still listed; nothing left means all cinemas.
+  const valid = new Set([...keep].filter((v) => (v === STARRED ? starred.length : keys.includes(v))));
+  setChosenCinemas(select, [...valid]);
 }
 
-function matchesCinema(choice) {
-  if (!choice) return () => true;
-  if (choice === STARRED) return (s) => isStarred(venueKey(s));
-  return (s) => venueKey(s) === choice;
+/** The cinema filter's choices: [] means all cinemas; may hold STARRED and cinema keys. */
+const chosenCinemas = (select) => [...select.selectedOptions].map((o) => o.value).filter(Boolean);
+
+function setChosenCinemas(select, values) {
+  for (const option of select.options) option.selected = values.length ? values.includes(option.value) : option.value === "";
+  select.dataset.prev = JSON.stringify(chosenCinemas(select));
 }
+
+/** After a click in the checklist: "All" clears the rest; picking any cinema unticks "All". */
+function tidyCinemaChoice(select) {
+  const before = new Set(JSON.parse(select.dataset.prev || "[]"));
+  const allTicked = select.options[0]?.selected;
+  const now = chosenCinemas(select);
+  const added = now.filter((v) => !before.has(v));
+  setChosenCinemas(select, allTicked && !added.length && before.size ? [] : now);
+}
+
+function cinemaSummary(select) {
+  const chosen = chosenCinemas(select);
+  const all = select.options[0]?.text || "All cinemas";
+  if (!chosen.length) return all;
+  const names = chosen.map((v) => (v === STARRED ? "★ Starred" : splitKey(v)[1]));
+  return names.length === 1 ? names[0] : chosen.includes(STARRED) ? `★ Starred + ${names.length - 1}` : `${names.length} cinemas`;
+}
+
+function matchesCinema(select) {
+  const chosen = chosenCinemas(select);
+  if (!chosen.length) return () => true;
+  const keys = new Set(chosen);
+  const starred = keys.has(STARRED);
+  return (s) => keys.has(venueKey(s)) || (starred && isStarred(venueKey(s)));
+}
+
+const onlyStarred = (select) => {
+  const chosen = chosenCinemas(select);
+  return chosen.length === 1 && chosen[0] === STARRED;
+};
 
 function tickClock() {
   $("clock").textContent = `MYT ${nowMyt().slice(11)}`;
@@ -460,18 +492,19 @@ function renderTools() {
 
 // ---------------------------------------------------------------- loading
 
-async function load() {
-  state.controller?.abort();
+async function load(view = state.main) {
+  view.controller?.abort();
   const controller = new AbortController();
-  const current = () => state.controller === controller;
-  Object.assign(state, { controller, shows: [], cinemas: [], errors: [], progress: { done: 0, total: 0 }, loading: true });
+  const current = () => view.controller === controller;
+  const date = view.date;
+  Object.assign(view, { controller, shows: [], cinemas: [], errors: [], progress: { done: 0, total: 0 }, loading: true, source: null });
   savePrefs();
-  fillAfterOptions();
+  if (view === state.sheet) fillAfterOptions();
 
   const chains = selectedChains();
   if (!chains.length) {
-    state.loading = false;
-    state.errors.push("Pick at least one chain.");
+    view.loading = false;
+    view.errors.push("Pick at least one chain.");
     render();
     return;
   }
@@ -481,25 +514,22 @@ async function load() {
   // chains at all; fetch live only for a day it doesn't have, or when it's missing or stale.
   const snap = await snapshotOnce();
   if (!current()) return;
-  if (snap?.days.includes(selectedDate())) {
-    const region = $("region").value.toLowerCase();
-    const wanted = (chain, r) => chains.includes(chain) && (!region || String(r).toLowerCase().includes(region));
-    state.cinemas = snap.cinemas.filter((c) => wanted(c.chain, c.region));
-    state.shows = snap.showtimes.filter((s) => s.business_date === selectedDate() && wanted(s.chain, s.region));
-    state.errors = (snap.errors[selectedDate()] || []).filter(
-      (e) => /could not load cinemas/.test(e) ? chains.some((c) => e.startsWith(c)) : state.cinemas.some((c) => e.startsWith(`${c.chain} ${c.name}:`)),
+  if (snap?.days.includes(date)) {
+    view.cinemas = snap.cinemas.filter((c) => inScope(c.chain, c.region, chains));
+    view.shows = snap.showtimes.filter((s) => s.business_date === date && inScope(s.chain, s.region, chains));
+    view.errors = (snap.errors[date] || []).filter((e) =>
+      /could not load cinemas/.test(e) ? chains.some((c) => e.startsWith(c)) : view.cinemas.some((c) => e.startsWith(`${c.chain} ${c.name}:`)),
     );
-    rememberCinemaPlaces(state.cinemas);
-    rememberPlaces(state.shows);
-    state.progress = { done: state.cinemas.length, total: state.cinemas.length };
-    state.source = snap.generatedAt;
-    finishLoad();
+    rememberCinemaPlaces(view.cinemas);
+    rememberPlaces(view.shows);
+    view.progress = { done: view.cinemas.length, total: view.cinemas.length };
+    view.source = snap.generatedAt;
+    finishLoad(view);
     return;
   }
-  state.source = null;
 
   try {
-    await collectShowtimes(selectedDate(), {
+    await collectShowtimes(date, {
       providers,
       chains,
       region: $("region").value,
@@ -507,40 +537,46 @@ async function load() {
       signal: controller.signal,
       onCinemas: (cinemas) => {
         if (!current()) return;
-        state.cinemas = cinemas;
+        view.cinemas = cinemas;
         rememberCinemaPlaces(cinemas);
       },
       onShowtimes: (shows) => {
         if (!current()) return;
-        state.shows.push(...shows);
+        view.shows.push(...shows);
         rememberPlaces(shows);
         scheduleRender();
       },
       onProgress: (progress) => {
         if (!current()) return;
-        state.progress = progress;
+        view.progress = progress;
         scheduleRender();
       },
       onError: (message) => {
         if (!current()) return;
-        state.errors.push(message);
+        view.errors.push(message);
         scheduleRender();
       },
     });
   } catch (err) {
     if (!current() || controller.signal.aborted) return;
-    state.errors.push(`Could not load showtimes: ${err.message || err}`);
+    view.errors.push(`Could not load showtimes: ${err.message || err}`);
   }
   if (!current()) return;
-  finishLoad();
+  finishLoad(view);
 }
 
-function finishLoad() {
-  state.loading = false;
+/** In the chosen region and chains. */
+function inScope(chain, region, chains = selectedChains()) {
+  const wanted = $("region").value.toLowerCase();
+  return chains.includes(chain) && (!wanted || String(region).toLowerCase().includes(wanted));
+}
+
+function finishLoad(view) {
+  view.loading = false;
   // Every cinema answered (or most did) and none has a show: that day isn't published yet.
-  const answered = state.progress.done - state.errors.filter((e) => !e.includes("could not load cinemas")).length;
-  if (!state.shows.length && answered > 0) state.emptyDates.add(emptyKey(selectedDate()));
-  else if (state.shows.length) state.emptyDates.delete(emptyKey(selectedDate()));
+  const answered = view.progress.done - view.errors.filter((e) => !e.includes("could not load cinemas")).length;
+  if (!view.shows.length && answered > 0) state.emptyDates.add(emptyKey(view.date));
+  else if (view.shows.length) state.emptyDates.delete(emptyKey(view.date));
   render();
 }
 
@@ -559,26 +595,27 @@ function scheduleRender() {
 
 // ---------------------------------------------------------------- grid
 
-function progressLabel() {
-  if (state.source && !state.loading) {
-    const d = new Date(Date.parse(state.source) + 8 * 3600 * 1000);
+function progressLabel(view) {
+  if (view.source && !view.loading) {
+    const d = new Date(Date.parse(view.source) + 8 * 3600 * 1000);
     const when = `${d.getUTCDate()} ${d.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" })}, ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`;
-    return `${state.cinemas.length} cinemas · updated ${when} MYT`;
+    return `${view.cinemas.length} cinemas · updated ${when} MYT`;
   }
-  const { done, total } = state.progress;
-  if (!total) return state.loading ? "Finding cinemas…" : "";
-  return state.loading ? `Loaded ${done}/${total} cinemas` : `Loaded ${done}/${total} cinemas · done`;
+  const { done, total } = view.progress;
+  if (!total) return view.loading ? "Finding cinemas…" : "";
+  return view.loading ? `Loaded ${done}/${total} cinemas` : `Loaded ${done}/${total} cinemas · done`;
 }
 
 function renderStatus() {
-  const { done, total } = state.progress;
+  const view = state.main;
+  const { done, total } = view.progress;
   const box = $("progress");
-  box.hidden = !state.loading && total === 0;
-  box.classList.toggle("done", !state.loading);
-  $("bar").style.width = total ? `${(done / total) * 100}%` : state.loading ? "4%" : "0";
-  $("progress-text").textContent = progressLabel();
+  box.hidden = !view.loading && total === 0;
+  box.classList.toggle("done", !view.loading);
+  $("bar").style.width = total ? `${(done / total) * 100}%` : view.loading ? "4%" : "0";
+  $("progress-text").textContent = progressLabel(view);
 
-  const errors = state.locationError ? [...state.errors, state.locationError] : state.errors;
+  const errors = state.locationError ? [...view.errors, state.locationError] : view.errors;
   if (!errors.length) {
     $("warnings").replaceChildren();
     return;
@@ -586,7 +623,7 @@ function renderStatus() {
   const list = el("ul", {}, errors.map((e) => el("li", {}, e)));
   $("warnings").replaceChildren(
     errors.length <= 2
-      ? el("div", { class: "warn" }, el("strong", {}, state.errors.length ? "Some data is missing. " : ""), list)
+      ? el("div", { class: "warn" }, el("strong", {}, view.errors.length ? "Some data is missing. " : ""), list)
       : el("details", { class: "warn" }, el("summary", {}, `${plural(errors.length, "source")} did not respond. The rest are shown.`), list),
   );
 }
@@ -594,14 +631,13 @@ function renderStatus() {
 const cards = new Map(); // movie key -> card element, reused so posters don't reload
 const GRID_SIZES = "(max-width: 560px) 46vw, (max-width: 1100px) 24vw, 220px";
 
-function movieCard(summary, index) {
+function movieCard(summary, nextDate = null) {
   let card = cards.get(summary.key);
   if (!card) {
     card = el(
       "a",
       { class: "card", href: `#/movie/${encodeURIComponent(summary.key)}` },
       posterFrame(summary, GRID_SIZES),
-      el("span", { class: "card-no mono", "aria-hidden": "true" }),
       el("span", { class: "card-count mono" }),
       el("div", { class: "card-body" }, el("h3"), el("div", { class: "card-meta mono" })),
     );
@@ -614,8 +650,11 @@ function movieCard(summary, index) {
     frame.classList.remove("no-img");
     frame.prepend(posterImage(summary.posters, GRID_SIZES, `${summary.title} poster`));
   }
-  card.querySelector(".card-no").textContent = pad2(index + 1);
-  card.querySelector(".card-count").textContent = plural(summary.showCount, "show");
+  // A search hit that isn't on the chosen day: greyed, with the day it next shows.
+  card.classList.toggle("later", Boolean(nextDate));
+  card.dataset.next = nextDate || "";
+  const p = nextDate ? dateParts(nextDate) : null;
+  card.querySelector(".card-count").textContent = p ? `Next: ${p.weekday} ${p.day} ${p.month}` : plural(summary.showCount, "show");
   card.querySelector("h3").textContent = summary.title;
   card.querySelector(".card-meta").textContent = [runtime(summary.duration_mins), summary.rating, summary.language]
     .filter(Boolean)
@@ -623,15 +662,29 @@ function movieCard(summary, index) {
   return card;
 }
 
+/** Search text, normalised like titles are (tags, case and punctuation don't matter). */
+const searchText = () => $("q").value.trim();
+
+function matchesSearch(show, query) {
+  if (!query) return true;
+  const raw = query.toLowerCase();
+  const key = normalizeTitle(query);
+  return show.movie_title.toLowerCase().includes(raw) || (key && show.movie_key.includes(key));
+}
+
+// Every day the snapshot has, so search covers the whole week (a live-only visit searches one day).
+let weekAll = null;
+
 function renderGrid() {
-  const keys = state.cinemas.length
-    ? state.cinemas.map((c) => `${c.chain}|${c.name}`)
-    : [...new Set(state.shows.map(venueKey))];
+  const view = state.main;
+  const keys = view.cinemas.length ? view.cinemas.map((c) => `${c.chain}|${c.name}`) : [...new Set(view.shows.map(venueKey))];
   fillCinemaSelect($("cinema"), keys, "All cinemas");
 
-  const visible = state.shows.filter(matchesCinema($("cinema").value));
+  const query = searchText();
+  const atCinema = matchesCinema($("cinema"));
+  const visible = view.shows.filter((s) => atCinema(s) && matchesSearch(s, query));
   const movies = summarizeMovies(visible);
-  for (const m of summarizeMovies(state.shows)) state.lastSummary.set(m.key, m);
+  for (const m of summarizeMovies(view.shows)) state.lastSummary.set(m.key, m);
 
   const sort = $("sort").value;
   movies.sort((a, b) =>
@@ -642,33 +695,52 @@ function renderGrid() {
         : b.showCount - a.showCount || a.title.localeCompare(b.title),
   );
 
-  $("count").textContent = state.shows.length
-    ? `${plural(movies.length, "movie")} · ${plural(new Set(visible.map(venueKey)).size, "cinema")}`
-    : "";
-  $("intro-date").textContent = `${dateParts(selectedDate()).long} · ${regionLabel()}`;
-  renderDateStrip($("dates"), "date");
+  // Searching: also list matches showing on other days this week, greyed, with their next day.
+  const later = [];
+  const weekShows = query && weekAll ? weekAll.filter((s) => inScope(s.chain, s.region)) : null;
+  if (weekShows) {
+    const today = new Set(movies.map((m) => m.key));
+    const elsewhere = weekShows.filter((s) => s.business_date > view.date && atCinema(s) && matchesSearch(s, query) && !today.has(s.movie_key));
+    for (const m of summarizeMovies(elsewhere)) {
+      state.lastSummary.set(m.key, m);
+      later.push({ summary: m, next: m.shows.map((s) => s.business_date).sort()[0] });
+    }
+    later.sort((a, b) => cmp(a.next, b.next) || a.summary.title.localeCompare(b.summary.title));
+  }
 
-  if (!movies.length) {
-    const text = state.loading
+  $("count").textContent = view.shows.length
+    ? `${plural(movies.length, "movie")} · ${plural(new Set(visible.map(venueKey)).size, "cinema")}` + (later.length ? ` · ${later.length} later this week` : "")
+    : "";
+  $("intro-date").textContent = `${dateParts(view.date).long} · ${regionLabel()}`;
+  renderDateStrip($("dates"), "date", view.date);
+
+  if (!movies.length && !later.length) {
+    const text = view.loading
       ? "Loading what's on…"
-      : state.shows.length
-        ? $("cinema").value === STARRED
-          ? "Nothing at your starred cinemas on this day."
-          : "Nothing at this cinema on this day."
-        : notPublishedText();
+      : query
+        ? `No movie matching “${query}” in ${regionLabel()}${weekAll ? " this week" : " on this day"}.`
+        : view.shows.length
+          ? onlyStarred($("cinema"))
+            ? "Nothing at your starred cinemas on this day."
+            : "Nothing at the chosen cinemas on this day."
+          : notPublishedText(view);
     $("grid").replaceChildren(el("p", { class: "empty" }, text));
     return;
   }
-  $("grid").replaceChildren(...movies.map(movieCard));
+  $("grid").replaceChildren(
+    ...movies.map((m) => movieCard(m)),
+    ...(later.length ? [el("p", { class: "grid-note mono" }, "Later this week")] : []),
+    ...later.map(({ summary, next }) => movieCard(summary, next)),
+  );
 }
 
 /** Text for a day with nothing loaded: unpublished schedule, or a real failure. */
-function notPublishedText() {
-  const p = dateParts(selectedDate());
-  if (state.emptyDates.has(emptyKey(selectedDate()))) {
+function notPublishedText(view) {
+  const p = dateParts(view.date);
+  if (state.emptyDates.has(emptyKey(view.date))) {
     return `${p.weekday} ${p.day} ${p.month}: no schedule yet. Malaysian cinemas publish the next week's showtimes on Wednesdays, so later days fill in then.`;
   }
-  return state.errors.length ? "Couldn't load showtimes. See the warning above." : "No showtimes found for this day and region.";
+  return view.errors.length ? "Couldn't load showtimes. See the warning above." : "No showtimes found for this day and region.";
 }
 
 // ---------------------------------------------------------------- movie sheet
@@ -759,7 +831,8 @@ const HERO_SIZES = "500px";
 
 function renderSheet() {
   const key = state.movieKey;
-  const all = state.shows.filter((s) => s.movie_key === key);
+  const view = state.sheet;
+  const all = view.shows.filter((s) => s.movie_key === key);
   const summary = summarizeMovies(all)[0] || state.lastSummary.get(key);
 
   if (sheetKey !== key) {
@@ -767,16 +840,16 @@ function renderSheet() {
     state.openVenues.clear();
     $("m-sort").value = state.here ? "near" : "time";
     $("m-poster").replaceChildren(summary ? posterFrame(summary, HERO_SIZES) : el("div", { class: "poster no-img" }));
+    // Start from the main page's cinema choice.
     $("m-cinema").dataset.sig = "";
-    $("m-cinema").replaceChildren(new Option("", $("cinema").value));
-    $("m-cinema").value = $("cinema").value;
+    $("m-cinema").replaceChildren(...[...$("cinema").selectedOptions].map((o) => new Option(o.text, o.value, true, true)));
   } else if (summary) {
     const img = $("m-poster").querySelector("img");
     if (img) setPoster(img, summary.posters);
     else if (summary.posters.length) $("m-poster").replaceChildren(posterFrame(summary, HERO_SIZES));
   }
 
-  $("m-title").textContent = summary?.title || (state.loading ? "Loading…" : "Movie not found");
+  $("m-title").textContent = summary?.title || (view.loading ? "Loading…" : "Movie not found");
   document.title = summary ? `${summary.title} · 52 Frames` : "52 Frames · Showtimes";
   const subtitleRow = ([chain, info]) => {
     const text = info.subtitles == null ? "Not listed" : info.subtitles.length ? info.subtitles.join(", ") : "None listed";
@@ -795,7 +868,7 @@ function renderSheet() {
       ].filter(([, v]) => v)
     : [];
   $("m-facts").replaceChildren(...facts.flatMap(([k, v, cls]) => [el("dt", {}, k), el("dd", { class: cls || null }, v)]));
-  renderDateStrip($("m-dates"), "m-date");
+  renderDateStrip($("m-dates"), "m-date", view.date);
 
   const keys = [...new Set(all.map(venueKey))];
   fillCinemaSelect($("m-cinema"), keys, `All cinemas (${keys.length})`);
@@ -803,26 +876,26 @@ function renderSheet() {
   const now = nowMyt();
   let after = $("m-after").value;
   if (after === "now") after = now.slice(11);
-  const shows = filterShowtimes(all, { after: after || undefined }).filter(matchesCinema($("m-cinema").value));
+  const shows = filterShowtimes(all, { after: after || undefined }).filter(matchesCinema($("m-cinema")));
 
   const group = selectedGroup();
   $("m-sort-field").hidden = group !== "cinema";
   $("m-count").textContent = all.length
     ? `${plural(shows.length, "show")} · ${plural(new Set(shows.map(venueKey)).size, "cinema")}`
     : "";
-  $("m-status").textContent = state.loading ? progressLabel() : "";
-  $("m-status").classList.toggle("on", state.loading);
+  $("m-status").textContent = view.loading ? progressLabel(view) : "";
+  $("m-status").classList.toggle("on", view.loading);
 
   if (!shows.length) {
-    const p = dateParts(selectedDate());
-    const text = state.loading
+    const p = dateParts(view.date);
+    const text = view.loading
       ? "Loading showtimes…"
       : all.length
-        ? $("m-cinema").value === STARRED
+        ? onlyStarred($("m-cinema"))
           ? "Not showing at your starred cinemas on this day."
           : "No shows match these filters."
-        : state.emptyDates.has(emptyKey(selectedDate()))
-          ? notPublishedText()
+        : state.emptyDates.has(emptyKey(view.date))
+          ? notPublishedText(view)
           : `Not showing on ${p.weekday} ${p.day} ${p.month} in ${regionLabel()}. Try another date.`;
     $("m-schedule").replaceChildren(el("p", { class: "empty" }, text));
     return;
@@ -871,6 +944,9 @@ function route() {
   $("sheet").hidden = !key;
   document.body.classList.toggle("locked", Boolean(key) || !$("stars").hidden);
   if (opening) {
+    state.sheet.date = state.pendingSheetDate || state.main.date;
+    state.pendingSheetDate = null;
+    load(state.sheet);
     returnFocus = document.activeElement;
     $("sheet").querySelector(".sheet-panel").scrollTop = 0;
     requestAnimationFrame(() => $("sheet").querySelector(".close").focus({ preventScroll: true }));
@@ -890,12 +966,15 @@ function closeSheet() {
   cameFromGrid = false;
 }
 
+const dropdowns = [];
+
 function render() {
   renderTools();
   renderStatus();
   renderGrid();
   if (state.movieKey) renderSheet();
   renderStars();
+  for (const d of dropdowns) d.sync();
 }
 
 // ---------------------------------------------------------------- wiring
@@ -908,19 +987,41 @@ async function init() {
   if (Array.isArray(saved.chains) && saved.chains.length) {
     for (const box of document.querySelectorAll("input[name=chain]")) box.checked = saved.chains.includes(box.value);
   }
-  if (saved.group === "time") document.querySelector("input[name=group][value=time]").checked = true;
+  // "By time" by default; once someone picks a grouping, keep it.
+  if (saved.group === "cinema") document.querySelector("input[name=group][value=cinema]").checked = true;
   fillAfterOptions();
+  for (const id of ["region", "sort", "cinema", "m-cinema", "m-after", "m-sort", "stars-region", "stars-chain"]) {
+    dropdowns.push(enhanceSelect($(id), id.endsWith("cinema") ? { summary: cinemaSummary } : {}));
+  }
   tickClock();
   setInterval(tickClock, 15000);
 
   $("toolbar").addEventListener("submit", (e) => e.preventDefault());
-  $("region").addEventListener("change", load);
-  for (const strip of [$("dates"), $("m-dates")]) strip.addEventListener("change", (e) => setDate(e.target.value));
-  for (const box of document.querySelectorAll("input[name=chain]")) box.addEventListener("change", load);
+  const reloadAll = () => {
+    load(state.main);
+    if (state.movieKey) load(state.sheet);
+  };
+  $("region").addEventListener("change", reloadAll);
+  for (const box of document.querySelectorAll("input[name=chain]")) box.addEventListener("change", reloadAll);
+  // The two date strips are independent: the movie view's date doesn't move the main page's.
+  $("dates").addEventListener("change", (e) => setDate(state.main, e.target.value));
+  $("m-dates").addEventListener("change", (e) => setDate(state.sheet, e.target.value));
+  for (const id of ["cinema", "m-cinema"]) $(id).addEventListener("change", (e) => tidyCinemaChoice(e.target));
   for (const id of ["cinema", "sort"]) $(id).addEventListener("change", render);
+  $("q").addEventListener("input", render);
+  $("q").addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && $("q").value) {
+      e.stopPropagation();
+      $("q").value = "";
+      render();
+    }
+  });
 
   $("grid").addEventListener("click", (e) => {
-    if (e.target.closest("a.card") && !e.metaKey && !e.ctrlKey && !e.shiftKey) cameFromGrid = true;
+    const card = e.target.closest("a.card");
+    if (!card || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    cameFromGrid = true;
+    state.pendingSheetDate = card.dataset.next || null;
   });
   for (const id of ["m-cinema", "m-after", "m-sort"]) $(id).addEventListener("change", render);
   for (const radio of document.querySelectorAll("input[name=group]")) {
@@ -947,6 +1048,12 @@ async function init() {
   });
 
   document.addEventListener("keydown", (e) => {
+    // "/" jumps to the search box (unless typing somewhere already).
+    if (e.key === "/" && !state.movieKey && $("stars").hidden && !/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName)) {
+      e.preventDefault();
+      $("q").focus();
+      return;
+    }
     if (e.key !== "Escape") return;
     if (!$("stars").hidden) closeStars();
     else if (state.movieKey) closeSheet();
@@ -963,8 +1070,12 @@ async function init() {
     render();
   });
 
-  load();
+  load(state.main);
   route();
+  snapshotOnce().then((snap) => {
+    weekAll = snap?.showtimes || null;
+    if (searchText()) render();
+  });
 
   // Turn location back on without a prompt if the visitor already allowed it.
   if (saved.location) {

@@ -1,0 +1,236 @@
+// Styled dropdowns layered on real <select> elements.
+//
+// The native <select> stays in the page (visually hidden) and remains the source of truth: the
+// page reads .value / .selectedOptions and listens for "change" as usual, forms and autofill keep
+// working, and if this script fails the native control is still there. The custom part is a
+// button plus a listbox popup with the usual keyboard behaviour (arrows, Home/End, type to jump,
+// Enter/Space to pick, Esc to close) and ARIA roles. <select multiple> becomes a checklist.
+// On narrow screens the list opens as a bottom sheet, which is easier to use with a thumb.
+
+let openOne = null;
+let uid = 0;
+
+function closeOpen() {
+  openOne?.close();
+}
+
+document.addEventListener("pointerdown", (e) => {
+  if (openOne && !openOne.root.contains(e.target)) closeOpen();
+});
+window.addEventListener("resize", () => openOne?.place());
+window.addEventListener("scroll", (e) => {
+  if (openOne && !openOne.list.contains(e.target)) openOne.place();
+}, true);
+
+export function enhanceSelect(select, { summary } = {}) {
+  const id = `cs${++uid}`;
+  const root = document.createElement("span");
+  root.className = `cselect${select.multiple ? " multi" : ""}`;
+  select.parentNode.insertBefore(root, select);
+  root.append(select);
+  select.classList.add("cselect-native");
+  select.tabIndex = -1;
+  select.setAttribute("aria-hidden", "true");
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "cselect-button";
+  button.setAttribute("aria-haspopup", "listbox");
+  button.setAttribute("aria-expanded", "false");
+  button.setAttribute("aria-controls", `${id}-list`);
+  const labelText = select.closest("label")?.querySelector(".label")?.textContent?.trim();
+  if (labelText) button.setAttribute("aria-label", labelText);
+  const text = document.createElement("span");
+  text.className = "cselect-text";
+  button.append(text);
+  root.append(button);
+
+  const list = document.createElement("div");
+  list.className = "cselect-list";
+  list.id = `${id}-list`;
+  list.setAttribute("role", "listbox");
+  list.tabIndex = -1;
+  if (select.multiple) list.setAttribute("aria-multiselectable", "true");
+  if (labelText) list.setAttribute("aria-label", labelText);
+  list.hidden = true;
+  root.append(list);
+
+  let items = []; // [{ option, node }]
+  let active = -1;
+  let typed = "";
+  let typedAt = 0;
+
+  const enabledItems = () => items.filter((i) => !i.option.disabled);
+
+  function build() {
+    items = [];
+    list.replaceChildren();
+    const add = (option, parent) => {
+      const node = document.createElement("div");
+      node.className = "cselect-option";
+      node.id = `${id}-o${items.length}`;
+      node.setAttribute("role", "option");
+      node.textContent = option.text;
+      if (option.disabled) node.setAttribute("aria-disabled", "true");
+      parent.append(node);
+      items.push({ option, node });
+    };
+    for (const child of select.children) {
+      if (child.tagName === "OPTGROUP") {
+        const group = document.createElement("div");
+        group.setAttribute("role", "group");
+        group.setAttribute("aria-label", child.label);
+        const head = document.createElement("div");
+        head.className = "cselect-group";
+        head.textContent = child.label;
+        head.setAttribute("aria-hidden", "true");
+        group.append(head);
+        for (const option of child.children) add(option, group);
+        list.append(group);
+      } else if (child.tagName === "OPTION") add(child, list);
+    }
+    mark();
+  }
+
+  function mark() {
+    items.forEach(({ option, node }, i) => {
+      node.setAttribute("aria-selected", String(option.selected));
+      node.classList.toggle("active", i === active);
+    });
+    const node = items[active]?.node;
+    if (node) {
+      list.setAttribute("aria-activedescendant", node.id);
+      node.scrollIntoView({ block: "nearest" });
+    } else list.removeAttribute("aria-activedescendant");
+  }
+
+  function sync() {
+    const chosen = [...select.selectedOptions];
+    text.textContent = summary ? summary(select, chosen) : chosen.map((o) => o.text).join(", ") || select.options[0]?.text || "";
+    button.disabled = select.disabled;
+    if (!list.hidden) {
+      build();
+    }
+  }
+
+  function place() {
+    if (list.hidden) return;
+    const sheet = window.matchMedia("(max-width: 560px)").matches;
+    root.classList.toggle("sheet", sheet);
+    if (sheet) {
+      list.style.cssText = "";
+      return;
+    }
+    const r = button.getBoundingClientRect();
+    const below = window.innerHeight - r.bottom - 12;
+    const above = r.top - 12;
+    const up = below < 220 && above > below;
+    list.style.left = `${Math.max(8, Math.min(r.left, window.innerWidth - Math.max(r.width, 220) - 8))}px`;
+    list.style.minWidth = `${r.width}px`;
+    list.style.maxHeight = `${Math.max(160, Math.min(360, up ? above : below))}px`;
+    list.style.top = up ? "" : `${r.bottom + 4}px`;
+    list.style.bottom = up ? `${window.innerHeight - r.top + 4}px` : "";
+  }
+
+  function open() {
+    if (!list.hidden || select.disabled) return;
+    closeOpen();
+    openOne = api;
+    build();
+    list.hidden = false;
+    root.classList.add("open");
+    button.setAttribute("aria-expanded", "true");
+    active = Math.max(0, items.findIndex((i) => i.option.selected));
+    place();
+    mark();
+    list.focus({ preventScroll: true });
+  }
+
+  function close(refocus = true) {
+    if (list.hidden) return;
+    list.hidden = true;
+    root.classList.remove("open", "sheet");
+    button.setAttribute("aria-expanded", "false");
+    if (openOne === api) openOne = null;
+    if (refocus) button.focus({ preventScroll: true });
+  }
+
+  function choose(index) {
+    const item = items[index];
+    if (!item || item.option.disabled) return;
+    if (select.multiple) item.option.selected = !item.option.selected;
+    else select.value = item.option.value;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    sync();
+    if (select.multiple) {
+      active = index;
+      mark();
+    } else close();
+  }
+
+  function move(to) {
+    const enabled = enabledItems();
+    if (!enabled.length) return;
+    const pos = enabled.indexOf(items[active]);
+    const next = to === "first" ? 0 : to === "last" ? enabled.length - 1 : Math.max(0, Math.min(enabled.length - 1, (pos < 0 ? -1 : pos) + to));
+    active = items.indexOf(enabled[next]);
+    mark();
+  }
+
+  button.addEventListener("click", (e) => {
+    e.preventDefault();
+    list.hidden ? open() : close();
+  });
+  button.addEventListener("keydown", (e) => {
+    if (["ArrowDown", "ArrowUp", "Enter", " "].includes(e.key)) {
+      e.preventDefault();
+      open();
+    }
+  });
+  // The dropdown usually sits inside a <label>: stop clicks here from also "activating" the label,
+  // which would move focus to the hidden native <select>. Keep focus on the list while picking.
+  list.addEventListener("mousedown", (e) => e.preventDefault());
+  list.addEventListener("click", (e) => {
+    e.preventDefault();
+    const node = e.target.closest(".cselect-option");
+    if (node) choose(items.findIndex((i) => i.node === node));
+  });
+  list.addEventListener("pointermove", (e) => {
+    const node = e.target.closest(".cselect-option");
+    const index = items.findIndex((i) => i.node === node);
+    if (index >= 0 && index !== active) {
+      active = index;
+      items.forEach(({ node: n }, i) => n.classList.toggle("active", i === active));
+    }
+  });
+  list.addEventListener("keydown", (e) => {
+    const keys = { ArrowDown: 1, ArrowUp: -1, PageDown: 8, PageUp: -8, Home: "first", End: "last" };
+    if (e.key in keys) {
+      e.preventDefault();
+      move(keys[e.key]);
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      choose(active);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      close();
+    } else if (e.key === "Tab") {
+      close(false);
+    } else if (e.key.length === 1 && !e.metaKey && !e.ctrlKey) {
+      // Type to jump to an option starting with the typed letters.
+      typed = Date.now() - typedAt > 700 ? e.key.toLowerCase() : typed + e.key.toLowerCase();
+      typedAt = Date.now();
+      const hit = items.findIndex((i) => !i.option.disabled && i.option.text.toLowerCase().replace(/^[★\s]+/, "").startsWith(typed));
+      if (hit >= 0) {
+        active = hit;
+        mark();
+      }
+    }
+  });
+  select.addEventListener("change", sync);
+
+  const api = { root, list, sync, open, close, place };
+  sync();
+  return api;
+}
