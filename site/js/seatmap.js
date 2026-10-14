@@ -1,8 +1,9 @@
-// A hidden extra: keep the mouse on a showtime for 3 seconds, or press and hold it on a touch
+// A hidden extra: keep the mouse on a showtime for 2.5 seconds, or press and hold it on a touch
 // screen, to see that show's live seat map, straight from the chain (GSC or TGV). Nothing is
-// fetched until the 3 seconds are up. A plain tap or click still opens the booking page.
+// fetched until the hold is complete. A plain tap or click still opens the booking page.
 
-export const HOLD_MS = 3000;
+export const HOLD_MS = 2500;
+const TRACE_DELAY_MS = 300; // the outline starts after this, so passing over a time doesn't flash it
 const MOVE_PX = 10; // a finger that moves this far is scrolling, not holding
 const CLOSE_DELAY_MS = 250; // mouse: time to travel from the showtime into the seat map
 
@@ -57,11 +58,37 @@ export function enableSeatPreview(root, { selector, showFor, fetchPlan }) {
   const pop = el("div", { class: "seatmap", role: "dialog", "aria-label": "Live seat map", hidden: true });
   document.body.append(pop);
 
+  /**
+   * The outline that runs round a held showtime. Drawn in the element's own pixels, so the line
+   * moves at the same speed along the long and the short sides.
+   */
+  function traceOutline(target) {
+    const w = target.offsetWidth;
+    const h = target.offsetHeight;
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("class", "hold-trace");
+    svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    svg.setAttribute("aria-hidden", "true");
+    svg.style.setProperty("--hold-ms", `${HOLD_MS - TRACE_DELAY_MS}ms`);
+    svg.style.setProperty("--hold-delay", `${TRACE_DELAY_MS}ms`);
+    const path = document.createElementNS(ns, "path");
+    // From the top middle, clockwise, back to the top middle; 1px in so the 2px line isn't cut.
+    path.setAttribute("d", `M${w / 2} 1H${w - 1}V${h - 1}H1V1Z`);
+    path.setAttribute("pathLength", "1");
+    svg.append(path);
+    target.append(svg);
+    return svg;
+  }
+
+  let trace = null;
   function cancelHold() {
     clearTimeout(timer);
     timer = null;
     holding?.classList.remove("holding");
     holding = null;
+    trace?.remove();
+    trace = null;
   }
 
   function startHold(target, e) {
@@ -71,7 +98,8 @@ export function enableSeatPreview(root, { selector, showFor, fetchPlan }) {
     holding = target;
     origin = { x: e.clientX, y: e.clientY };
     const type = e.pointerType;
-    target.classList.add("holding"); // the outline trace (style.css)
+    target.classList.add("holding");
+    trace = traceOutline(target);
     timer = setTimeout(() => {
       cancelHold();
       // The finger is still down: the click that follows its release must not open the booking page.
@@ -181,7 +209,7 @@ export function enableSeatPreview(root, { selector, showFor, fetchPlan }) {
   });
 
   // Touch and pen: press and hold without moving. A link's own long-press menu (open in new tab,
-  // preview, copy) appears long before 3 s, and some phones won't let a page cancel it, so while a
+  // preview, copy) appears before the hold completes, and some phones won't let a page cancel it, so while a
   // finger is down the showtime isn't a link. It is again by the time a quick tap's click arrives.
   let pressed = null;
   const unlink = (target) => {

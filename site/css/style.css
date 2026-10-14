@@ -1,6 +1,6 @@
 /* 52 Frames — showtimes.
-   Industrial sheet in the Arknights / Endfield manner: warm paper or graphite, one signal yellow,
-   heavy condensed type, mono labels, hairline rules and a few structural marks.
+   Dark only: graphite, one signal yellow, Spectral headings, Hanken Grotesk text, Work Sans
+   small capitals, hairline rules.
    Function first: every mark here labels, separates or shows state. */
 
 @font-face { font-family: "Spectral"; src: url("../fonts/spectral-600.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
@@ -8,29 +8,30 @@
 @font-face { font-family: "Work Sans"; src: url("../fonts/work-sans.woff2") format("woff2"); font-weight: 400 700; font-style: normal; font-display: swap; }
 
 :root {
-  --bg: #e6e5df;
-  --contours: url("../assets/contours-light.svg");
-  --surface: #f3f2ee;
-  --surface-2: #ebeae4;
-  --ink: #16171a;
-  --ink-2: #3a3b3f;
-  --muted: #6c6d72;
-  --line: #cdccc4;
-  --line-strong: #16171a;
-  --band: #16171a;
-  --band-ink: #f3f2ee;
-  --band-muted: #a3a4a8;
+  --bg: #0c0d0f;
+  --contours: url("../assets/contours-dark.svg");
+  --surface: #15161a;
+  --surface-2: #1c1e22;
+  --ink: #e9e8e3;
+  --ink-2: #c4c3be;
+  --muted: #8a8b90;
+  --line: #2b2d32;
+  --line-strong: #e9e8e3;
+  --band: #e9e8e3;
+  --band-ink: #121316;
+  --band-muted: #55565b;
   --accent: #ffd200;
   --on-accent: #16171a;
-  --gsc: #d4a017;
-  --tgv: #c8102e;
-  --warn: #9a5b00;
-  --warn-bg: #fff3c4;
-  --scrim: rgb(12 13 15 / 0.62);
-  --band-accent: #ffd200;
-  --star: #c48a00;
-  --star-bg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cg fill='%23c48a00' fill-opacity='0.22'%3E%3Cpolygon transform='translate(3 4)' points='4,0 5,2.8 8,3 5.6,4.9 6.5,8 4,6.2 1.5,8 2.4,4.9 0,3 3,2.8'/%3E%3Cpolygon transform='translate(17 17) scale(.75)' points='4,0 5,2.8 8,3 5.6,4.9 6.5,8 4,6.2 1.5,8 2.4,4.9 0,3 3,2.8'/%3E%3C/g%3E%3C/svg%3E");
-  --star-bg-band: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cg fill='%23ffd200' fill-opacity='0.22'%3E%3Cpolygon transform='translate(3 4)' points='4,0 5,2.8 8,3 5.6,4.9 6.5,8 4,6.2 1.5,8 2.4,4.9 0,3 3,2.8'/%3E%3Cpolygon transform='translate(17 17) scale(.75)' points='4,0 5,2.8 8,3 5.6,4.9 6.5,8 4,6.2 1.5,8 2.4,4.9 0,3 3,2.8'/%3E%3C/g%3E%3C/svg%3E");
+  --gsc: #e5b52b;
+  --tgv: #d62839;
+  --warn: #ffcf5a;
+  --warn-bg: #2a2310;
+  --scrim: rgb(0 0 0 / 0.72);
+  --band-accent: #121316;
+  --hold-line: #9a6a00; /* the hold trace: deep amber, our yellow, visible on the light band */
+  --star: #ffd200;
+  --star-bg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cg fill='%23ffd200' fill-opacity='0.13'%3E%3Cpolygon transform='translate(3 4)' points='4,0 5,2.8 8,3 5.6,4.9 6.5,8 4,6.2 1.5,8 2.4,4.9 0,3 3,2.8'/%3E%3Cpolygon transform='translate(17 17) scale(.75)' points='4,0 5,2.8 8,3 5.6,4.9 6.5,8 4,6.2 1.5,8 2.4,4.9 0,3 3,2.8'/%3E%3C/g%3E%3C/svg%3E");
+  --star-bg-band: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cg fill='%238a6400' fill-opacity='0.28'%3E%3Cpolygon transform='translate(3 4)' points='4,0 5,2.8 8,3 5.6,4.9 6.5,8 4,6.2 1.5,8 2.4,4.9 0,3 3,2.8'/%3E%3Cpolygon transform='translate(17 17) scale(.75)' points='4,0 5,2.8 8,3 5.6,4.9 6.5,8 4,6.2 1.5,8 2.4,4.9 0,3 3,2.8'/%3E%3C/g%3E%3C/svg%3E");
 
   /* Spectral for headings, times and dates; Hanken Grotesk to read; Work Sans for small capitals.
      All three are in site/fonts/ (SIL Open Font License), so no font request leaves the site. */
@@ -39,34 +40,9 @@
   --f-body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --f-label: "Work Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --cut: 12px;
-  color-scheme: light;
+  color-scheme: dark;
 }
 
-/* Dark: set on <html> by the script in index.html (the visitor's choice, else the device's). */
-:root[data-theme="dark"] {
-    --bg: #0c0d0f;
-    --contours: url("../assets/contours-dark.svg");
-    --surface: #15161a;
-    --surface-2: #1c1e22;
-    --ink: #e9e8e3;
-    --ink-2: #c4c3be;
-    --muted: #8a8b90;
-    --line: #2b2d32;
-    --line-strong: #e9e8e3;
-    --band: #e9e8e3;
-    --band-ink: #121316;
-    --band-muted: #55565b;
-    --gsc: #e5b52b;
-    --tgv: #d62839;
-    --warn: #ffcf5a;
-    --warn-bg: #2a2310;
-    --scrim: rgb(0 0 0 / 0.72);
-    --band-accent: #121316;
-    --star: #ffd200;
-    --star-bg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cg fill='%23ffd200' fill-opacity='0.13'%3E%3Cpolygon transform='translate(3 4)' points='4,0 5,2.8 8,3 5.6,4.9 6.5,8 4,6.2 1.5,8 2.4,4.9 0,3 3,2.8'/%3E%3Cpolygon transform='translate(17 17) scale(.75)' points='4,0 5,2.8 8,3 5.6,4.9 6.5,8 4,6.2 1.5,8 2.4,4.9 0,3 3,2.8'/%3E%3C/g%3E%3C/svg%3E");
-    --star-bg-band: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cg fill='%238a6400' fill-opacity='0.28'%3E%3Cpolygon transform='translate(3 4)' points='4,0 5,2.8 8,3 5.6,4.9 6.5,8 4,6.2 1.5,8 2.4,4.9 0,3 3,2.8'/%3E%3Cpolygon transform='translate(17 17) scale(.75)' points='4,0 5,2.8 8,3 5.6,4.9 6.5,8 4,6.2 1.5,8 2.4,4.9 0,3 3,2.8'/%3E%3C/g%3E%3C/svg%3E");
-    color-scheme: dark;
-}
 
 *,
 *::before,
@@ -136,12 +112,6 @@ h1 { margin: 0; font: var(--w-display) clamp(40px, 8vw, 76px)/0.9 var(--f-displa
 .intro-rule { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
 .intro-rule .mono { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.hazard {
-  flex: 1; height: 8px; min-width: 40px;
-  background: repeating-linear-gradient(-45deg, var(--ink) 0 6px, transparent 6px 12px);
-  opacity: 0.85;
-}
-.hazard.thin { display: block; height: 4px; opacity: 0.3; }
 
 /* ----------------------------------------------------------------- controls */
 
@@ -273,12 +243,14 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
 .progress.done .bar span { background: var(--accent); }
 .progress .mono { color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-.warn { border-left: 3px solid var(--warn); background: var(--warn-bg); color: var(--ink); padding: 8px 12px; margin-bottom: 8px; font-size: 13px; }
-.warn summary { cursor: pointer; font-weight: 600; }
+/* A quiet note, not an alarm: the rest of the page still works. */
+.warn { border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); padding: 10px 14px; margin-bottom: 10px; font-size: 13.5px; }
+.warn strong { font-weight: 600; color: var(--ink); }
+.warn summary { cursor: pointer; font-weight: 600; color: var(--ink); }
 .warn ul { margin: 6px 0 0; padding-left: 18px; }
 .warn li { overflow-wrap: anywhere; }
 
-.empty { border: 1px dashed var(--line); padding: 28px 16px; text-align: center; color: var(--muted); margin: 0; }
+.empty { border: 1px solid var(--line); border-radius: var(--r-panel); background: var(--surface); padding: 28px 16px; text-align: center; color: var(--ink-2); margin: 0; }
 
 /* -------------------------------------------------------------- poster grid */
 
@@ -339,11 +311,6 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
   background: var(--surface); border: 1px solid var(--line-strong); overscroll-behavior: contain;
   box-shadow: 0 24px 60px rgb(0 0 0 / 0.35);
 }
-.stars-sheet .sheet-panel::before {
-  /* Top rule: ink with a yellow lead-in. */
-  content: ""; position: sticky; top: 0; grid-column: 1 / -1; height: 4px; z-index: 2;
-  background: linear-gradient(90deg, var(--accent) 0 96px, var(--ink) 96px);
-}
 
 /* Movie header: back, title and dates stay pinned while the schedule scrolls. */
 .m-head {
@@ -380,7 +347,6 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
 .m-main { padding: 4px 22px 28px; min-width: 0; }
 
 .sec-head { display: flex; align-items: center; gap: 10px; margin: 18px 0 12px; }
-.sec-no { font: 700 12px/1 var(--f-label); color: var(--on-accent); background: var(--accent); padding: 4px 6px; letter-spacing: 0.04em; }
 .sec-head h3 { margin: 0; font: var(--w-display) 18px/1 var(--f-display); }
 .sec-rule { flex: 1; height: 1px; background: var(--line); min-width: 16px; }
 .sec-head .mono { color: var(--muted); white-space: nowrap; }
@@ -464,7 +430,7 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
 .times { display: flex; flex-wrap: wrap; gap: 6px; }
 .time {
   display: inline-flex; align-items: baseline; gap: 6px; padding: 6px 10px 6px 8px;
-  border: 1px solid var(--line); border-left: 3px solid var(--ink-2); background: var(--surface);
+  border: 1px solid var(--line); background: var(--surface);
   color: var(--ink); text-decoration: none; white-space: nowrap;
 }
 .time b { font: var(--w-display) 17px/1 var(--f-display); font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
@@ -474,10 +440,9 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
 .card-shows { margin-top: 6px; color: var(--ink-2); }
 .concert-choice { display: flex; align-items: center; gap: 8px; min-height: 40px; }
 .concert-choice input { accent-color: var(--ink); width: 18px; height: 18px; }
-a.time:hover { background: var(--band); color: var(--band-ink); border-color: var(--band); border-left-color: var(--accent); }
-a.time:hover i, a.time:hover .overnight { color: var(--band-accent); }
+a.time:hover, a.time.holding { background: var(--band); color: var(--band-ink); border-color: var(--band); }
+a.time:hover i, a.time:hover .overnight, a.time.holding i, a.time.holding .overnight { color: var(--band-accent); }
 .time.full, .trow.full { opacity: 0.5; }
-.time.full { border-left-color: var(--line); }
 .time.full b, .trow.full .trow-time { text-decoration: line-through; text-decoration-thickness: 2px; }
 .time.past, .trow.past { opacity: 0.4; }
 
@@ -489,7 +454,7 @@ a.time:hover i, a.time:hover .overnight { color: var(--band-accent); }
   /* A busy movie has hundreds of rows: skip laying out and painting the ones off screen. */
   content-visibility: auto; contain-intrinsic-size: auto 46px;
 }
-a.trow:hover { background: var(--band); color: var(--band-ink); }
+a.trow:hover, a.trow.holding { background: var(--band); color: var(--band-ink); }
 .trow.starred { background-image: var(--star-bg); }
 a.trow.starred:hover { background-image: var(--star-bg-band); }
 
@@ -508,7 +473,7 @@ a.trow.starred:hover { background-image: var(--star-bg-band); }
 .to-top:hover { background: var(--accent); color: #16171a; box-shadow: 0 8px 24px rgb(0 0 0 / 0.25); }
 .to-top:hover span:first-child { color: inherit; }
 .to-top:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-a.trow:hover .trow-what, a.trow:hover .trow-go { color: var(--band-accent); }
+a.trow:hover .trow-what, a.trow:hover .trow-go, a.trow.holding .trow-what, a.trow.holding .trow-go { color: var(--band-accent); }
 /* Sized for "HH:MM"; an after-midnight "+1" goes just below the time. */
 .trow-time { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 4px; white-space: nowrap; font: var(--w-display) 22px/1 var(--f-display); font-variant-numeric: tabular-nums; }
 .trow-time .overnight { margin-left: 0; }
@@ -633,23 +598,20 @@ a.trow:hover .trow-what, a.trow:hover .trow-go { color: var(--band-accent); }
 
 #m-dates { display: flex; overflow-x: auto; padding: 3px; }
 #m-dates .day { flex: 0 0 48px; }
-a.trow:hover .overnight { color: var(--band-accent); }
+a.trow:hover .overnight, a.trow.holding .overnight { color: var(--band-accent); }
 
 /* -------------------------------------------------------------- live seat map (seatmap.js)
    Hidden: hold a showtime for 3 s (mouse rests on it, or a finger presses it). */
 .seat-hold { position: relative; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
-/* While held (mouse resting or finger down) a line runs round the showtime: from the top middle,
-   clockwise, back to the top middle. It starts after a moment, so passing over doesn't flash it,
-   and ends as the seat map opens (3 s). */
-@property --hold { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
-.seat-hold.holding::after {
-  content: ""; position: absolute; inset: 0; z-index: 1; padding: 2px; pointer-events: none;
-  background: conic-gradient(var(--accent) var(--hold), transparent 0);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor; mask-composite: exclude;
-  animation: seat-hold 2.6s linear 0.4s both;
+/* While held (mouse resting or finger down) the row shows as hovered and a line runs round it at
+   an even speed: from the top middle, clockwise, back to the top middle, closing as the seat map
+   opens. seatmap.js draws the outline in the row's own pixels and sets the timing. */
+.hold-trace { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; overflow: visible; }
+.hold-trace path {
+  fill: none; stroke: var(--hold-line); stroke-width: 2; stroke-dasharray: 1; stroke-dashoffset: 1;
+  animation: seat-hold var(--hold-ms, 2200ms) linear var(--hold-delay, 300ms) both;
 }
-@keyframes seat-hold { from { --hold: 0deg; } to { --hold: 360deg; } }
+@keyframes seat-hold { to { stroke-dashoffset: 0; } }
 
 .seatmap {
   position: fixed; z-index: 40; width: min(440px, calc(100vw - 16px)); max-height: calc(100vh - 16px); max-height: calc(100dvh - 16px);
