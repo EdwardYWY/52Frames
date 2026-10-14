@@ -7,8 +7,8 @@
 <meta name="description" content="GSC and TGV showtimes across Malaysia, on one page.">
 <title>52 Frames</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2316171a'/%3E%3Cpath d='M6 6h14l6 6v14H6z' fill='%23ffd200'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/style.css?v=7">
-<script type="module" src="js/app.js?v=7"></script>
+<link rel="stylesheet" href="css/style.css?v=8">
+<script type="module" src="js/app.js?v=8"></script>
 </head>
 <body>
 
@@ -52,8 +52,8 @@
       </label>
       <label class="field"><span class="label">Region</span>
         <span class="select"><select id="region">
-          <option>Klang Valley</option><option>Northern</option><option>Southern</option>
-          <option>East Coast</option><option>East Malaysia</option><option value="">All Malaysia</option>
+          <option value="">All Malaysia</option><option>Klang Valley</option><option>Northern</option>
+          <option>Southern</option><option>East Coast</option><option>East Malaysia</option>
         </select></span>
       </label>
       <label class="field field-wide"><span class="label">Cinema</span><span class="select"><select id="cinema" multiple></select></span></label>
@@ -136,6 +136,7 @@
           <label><input type="radio" name="group" value="time" checked><span>By time</span></label>
           <label><input type="radio" name="group" value="cinema"><span>By cinema</span></label>
         </div>
+        <label class="field"><span class="label">Region</span><span class="select"><select id="m-region"></select></span></label>
         <label class="field"><span class="label">Cinema</span><span class="select"><select id="m-cinema" multiple></select></span></label>
         <label class="field"><span class="label">From</span><span class="select"><select id="m-after"></select></span></label>
         <label class="field" id="m-sort-field"><span class="label">Sort cinemas</span>
@@ -147,6 +148,7 @@
       <div class="m-status" id="m-status"></div>
       <div id="m-schedule"></div>
     </div>
+    <button type="button" class="to-top" id="to-top" hidden><span aria-hidden="true">↑</span><span>Top</span></button>
   </article>
 </div>
 </body>

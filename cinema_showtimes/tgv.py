@@ -18,6 +18,67 @@ SESSIONS_URL = f"{API_BASE}/boxoffice/v1/moviesession_get"
 MOVIE_URL = "https://www.tgv.com.my/movies/details"
 INFO_URL = "https://www.tgv.com.my/movie"
 
+
+# TGV cinema names in GSC's "Town - Mall" style, by cinema id. Same table as TGV_NAMES in
+# site/js/places.js (tests/js/parity.test.mjs checks they match).
+NAMES = {
+    "1SM": "Kuala Lumpur - 1 Shamelin",
+    "BU0": "Petaling Jaya - 1 Utama",
+    "1AV": "Penang - 1st Avenue",
+    "ALM": "Putrajaya - Alamanda",
+    "AMP": "Ampang - Ampang Point",
+    "AU2": "Kuala Lumpur - AEON AU2 Setiawangsa",
+    "BIN": "Bintulu - Boulevard",
+    "BI0": "Johor Bahru - AEON Bukit Indah",
+    "BKM": "Bukit Mertajam - AEON Bukit Mertajam",
+    "BR0": "Klang - AEON Bukit Raja",
+    "BBT": "Klang - AEON Bukit Tinggi",
+    "ICT": "Shah Alam - Central i-City",
+    "CHR": "Cheras - AEON Cheras Selatan",
+    "CTR": "Kuala Lumpur - Cheras Sentral",
+    "CYB": "Cyberjaya - DPulze",
+    "GUR": "Penang - Gurney Paragon",
+    "JAY": "Petaling Jaya - Jaya Shopping Centre",
+    "KP0": "Kepong - AEON Metro Prima",
+    "IP0": "Ipoh - AEON Kinta City",
+    "KUL": "Kulai - AEON Kulaijaya",
+    "MSR": "Kemaman - Mesra Mall",
+    "MN0": "Seri Kembangan - The Mines",
+    "IMP": "Miri - Imperial Mall",
+    "PBJ": "Kuala Lumpur - Pavilion Bukit Jalil",
+    "PDH": "Kuala Lumpur - Pavilion Damansara Heights",
+    "PKL": "Kuala Lumpur - Pavilion Kuala Lumpur",
+    "RWK": "Rawang - AEON Rawang Anggun",
+    "KLE": "Ipoh - Sentra Mall Klebang",
+    "S20": "Seremban - AEON Seremban 2",
+    "MAN": "Seri Manjung - AEON Seri Manjung",
+    "STW": "Puchong - SetiaWalk",
+    "S18": "Ipoh - AEON Station 18",
+    "STR": "Petaling Jaya - The Strand Kota Damansara",
+    "SWP": "Kuala Lumpur - Sunway Putra",
+    "SW0": "Subang Jaya - Sunway Pyramid",
+    "SWS": "Subang Jaya - Sunway Square",
+    "SWV": "Kuala Lumpur - Sunway Velocity",
+    "WWM": "Kuala Lumpur - Sunway Wangsa Walk",
+    "KLC": "Kuala Lumpur - Suria KLCC",
+    "TAI": "Taiping - AEON Taiping",
+    "TSC": "Johor Bahru - Tasek Central",
+    "TBR": "Johor Bahru - AEON Tebrau City",
+    "KSL": "Klang - KSL Esplanade",
+    "TOP": "Johor Bahru - Toppen",
+    "VIV": "Kuching - Vivacity Megamall",
+}
+
+
+def cinema_name(cinema_id: str, raw_name: str, state_label: str = "") -> str:
+    """The table name, else TGV's own name without the "TGV" prefix and "(New)", led by the state."""
+    if cinema_id in NAMES:
+        return NAMES[cinema_id]
+    name = re.sub(r"^tgv\s+", "", raw_name or cinema_id, flags=re.I)
+    name = re.sub(r"\s*\(new\)\s*$", "", name, flags=re.I).strip() or cinema_id
+    return f"{state_label} - {name}" if state_label and " - " not in name else name
+
+
 # TGV groups cinemas by state; map them onto the shared regions GSC uses.
 STATE_TO_REGION = {
     "klangvalley": "Klang Valley",
@@ -61,9 +122,7 @@ def parse_cinemas(payload: dict) -> list[Cinema]:
             if cinema_id in seen:
                 continue
             seen.add(cinema_id)
-            name = _title_case(item.get("name", cinema_id))
-            if not name.upper().startswith("TGV"):
-                name = f"TGV {name}"
+            name = cinema_name(cinema_id, _title_case(item.get("name", cinema_id)), state.get("label", ""))
             cinemas.append(
                 Cinema(
                     chain=CHAIN,

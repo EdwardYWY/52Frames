@@ -4,7 +4,8 @@
 // Nothing here touches the page. Network and XML parsing are injectable so Node tests can
 // run the parsers against tests/fixtures/ without a browser.
 
-import { floatOrNull, intOrNull, makeShowtime, normalizeSubtitles } from "./models.js?v=7";
+import { floatOrNull, intOrNull, makeShowtime, normalizeSubtitles } from "./models.js?v=8";
+import { tgvCinemaName } from "./places.js?v=8";
 
 // ---------------------------------------------------------------------------- GSC
 
@@ -198,8 +199,7 @@ export function parseTgvCinemas(payload) {
       const id = item.cinemaid;
       if (seen.has(id)) continue;
       seen.add(id);
-      let name = titleCase(item.name ?? id);
-      if (!name.toUpperCase().startsWith("TGV")) name = `TGV ${name}`;
+      const name = tgvCinemaName(id, titleCase(item.name ?? id), state.label ?? "");
       cinemas.push({
         chain: TGV.chain,
         cinema_id: id,
