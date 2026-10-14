@@ -238,12 +238,7 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
   overflow-wrap: anywhere;
 }
 .card-meta { margin-top: 5px; color: var(--muted); }
-.card-where { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 6px; margin-top: 7px; font-size: 12.5px; color: var(--ink-2); min-width: 0; }
-.card-venue { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 0 1 auto; }
-.card-more { font: 600 11px var(--f-mono); color: var(--muted); flex: none; white-space: nowrap; }
-.card-chains { display: flex; gap: 3px; flex: 0 0 100%; }
-.card-star { color: var(--star); flex: none; font-size: 13px; line-height: 1; }
-.card-km { font: 600 11px var(--f-mono); color: var(--ink-2); flex: none; }
+.card-star { color: var(--star); flex: none; font-size: 13px; line-height: 1; } /* by-time rows */
 
 .chain {
   display: inline-block; flex: 0 0 auto; position: relative;
@@ -289,7 +284,7 @@ select:focus { outline: none; border-bottom-color: var(--accent); background: va
   margin: 0 130px 8px 0; font: 700 clamp(28px, 4.4vw, 46px)/0.95 var(--f-display); text-transform: uppercase;
   overflow-wrap: anywhere;
 }
-.m-chains { display: flex; gap: 4px; margin-bottom: 20px; }
+.m-main h2 + .sec-head { margin-top: 14px; }
 
 .sec-head { display: flex; align-items: center; gap: 10px; margin: 18px 0 12px; }
 .sec-no { font: 700 12px/1 var(--f-mono); color: var(--on-accent); background: var(--accent); padding: 4px 6px; letter-spacing: 0.04em; }

@@ -340,7 +340,6 @@ function posterFrame(summary, sizes) {
   return frame;
 }
 
-const chainTags = (chains) => chains.map((c) => el("span", { class: `chain ${c}` }, c));
 
 // ---------------------------------------------------------------- controls
 
@@ -528,22 +527,6 @@ function renderStatus() {
   );
 }
 
-/** The cinema a card names: starred first, then nearest, then the one with the most shows. */
-function leadVenue(shows) {
-  const counts = new Map();
-  for (const s of shows) counts.set(venueKey(s), (counts.get(venueKey(s)) || 0) + 1);
-  const keys = [...counts.keys()];
-  keys.sort((a, b) => {
-    const star = Number(isStarred(b)) - Number(isStarred(a));
-    if (star) return star;
-    const da = kmTo(a);
-    const db = kmTo(b);
-    if (da != null && db != null && da !== db) return da - db;
-    return counts.get(b) - counts.get(a) || a.localeCompare(b);
-  });
-  return { key: keys[0], others: keys.length - 1 };
-}
-
 const cards = new Map(); // movie key -> card element, reused so posters don't reload
 const GRID_SIZES = "(max-width: 560px) 46vw, (max-width: 1100px) 24vw, 220px";
 
@@ -556,7 +539,7 @@ function movieCard(summary, index) {
       posterFrame(summary, GRID_SIZES),
       el("span", { class: "card-no mono", "aria-hidden": "true" }),
       el("span", { class: "card-count mono" }),
-      el("div", { class: "card-body" }, el("h3"), el("div", { class: "card-meta mono" }), el("div", { class: "card-where" })),
+      el("div", { class: "card-body" }, el("h3"), el("div", { class: "card-meta mono" })),
     );
     cards.set(summary.key, card);
   }
@@ -573,19 +556,6 @@ function movieCard(summary, index) {
   card.querySelector(".card-meta").textContent = [runtime(summary.duration_mins), summary.rating, summary.language]
     .filter(Boolean)
     .join(" · ");
-  const lead = leadVenue(summary.shows);
-  const km = kmLabel(kmTo(lead.key));
-  card.querySelector(".card-where").replaceChildren(
-    ...[
-    el("span", { class: "card-chains" }, chainTags(summary.chains)),
-    isStarred(lead.key) ? el("span", { class: "card-star", title: "Starred cinema" }, "★") : null,
-    el("span", { class: "card-venue" }, splitKey(lead.key)[1]),
-    km ? el("span", { class: "card-km" }, km) : null,
-    lead.others
-      ? el("span", { class: "card-more", title: `Also at ${plural(lead.others, "other cinema")}` }, `+${lead.others} more ${lead.others === 1 ? "cinema" : "cinemas"}`)
-      : null,
-    ].filter(Boolean),
-  );
   return card;
 }
 
@@ -746,6 +716,7 @@ function renderSheet() {
   if (sheetKey !== key) {
     sheetKey = key;
     state.openVenues.clear();
+    $("m-sort").value = state.here ? "near" : "time";
     $("m-poster").replaceChildren(summary ? posterFrame(summary, HERO_SIZES) : el("div", { class: "poster no-img" }));
     $("m-cinema").dataset.sig = "";
     $("m-cinema").replaceChildren(new Option("", $("cinema").value));
@@ -758,7 +729,6 @@ function renderSheet() {
 
   $("m-title").textContent = summary?.title || (state.loading ? "Loading…" : "Movie not found");
   document.title = summary ? `${summary.title} · 52 Frames` : "52 Frames · Showtimes";
-  $("m-chains").replaceChildren(...chainTags(summary?.chains || []));
   const facts = summary
     ? [
         ["Runtime", runtime(summary.duration_mins)],
