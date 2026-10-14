@@ -5,7 +5,7 @@
 
 :root {
   --bg: #e6e5df;
-  --grid: rgb(22 23 26 / 0.045);
+  --contours: url("../assets/contours-light.svg");
   --surface: #f3f2ee;
   --surface-2: #ebeae4;
   --ink: #16171a;
@@ -39,7 +39,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0c0d0f;
-    --grid: rgb(233 232 227 / 0.035);
+    --contours: url("../assets/contours-dark.svg");
     --surface: #15161a;
     --surface-2: #1c1e22;
     --ink: #e9e8e3;
@@ -72,10 +72,10 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
   background-color: var(--bg);
-  background-image:
-    linear-gradient(var(--grid) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 32px 32px;
+  background-image: var(--contours);
+  /* Keep the reviewed spacing on every screen; narrow viewports crop the tile. */
+  background-size: 1200px 900px;
+  background-position: center top;
   color: var(--ink);
   font: 15px/1.5 var(--f-body);
   overflow-x: hidden;

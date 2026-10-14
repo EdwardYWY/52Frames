@@ -81,6 +81,9 @@ build step, no dependencies.
   its public movie pages, so the snapshot job reads those (one page per movie per run; titles are
   matched to GSC's page links by their letters and digits). Pages that don't say show
   "Not listed"; the live fallback has TGV's only.
+- **Background** uses a static, seamless contour pattern with wide spacing and 40% line opacity.
+  Light and dark themes load their own small SVG; phones crop rather than shrink the pattern.
+  No contour generation or animation runs in the browser.
 - **Posters** come from both chains; when both have one, the higher-resolution one is used where
   it matters (GSC's 500 px poster in the movie view) and the browser picks a lighter one for the grid.
 - **Location** (optional, top bar): shows the distance to each cinema and enables "Nearest". GSC
