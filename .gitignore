@@ -4,3 +4,7 @@ __pycache__/
 venv/
 .pytest_cache/
 .ruff_cache/
+
+# Built by scripts/snapshot.mjs in the Pages workflow
+site/data/
+_site/

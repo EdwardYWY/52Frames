@@ -12,7 +12,7 @@ import {
   parseTgvCinemas,
   parseTgvShowtimes,
 } from "../../site/js/providers.js";
-import { parseXml } from "./xml.mjs";
+import { parseXml } from "../../scripts/xml.mjs";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const fixture = (name) => readFileSync(new URL(`../fixtures/${name}`, import.meta.url), "utf8");

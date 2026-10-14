@@ -6,6 +6,7 @@ import { collectShowtimes, createCache, filterShowtimes, summarizeMovies } from 
 import { REGIONS, addDays, distanceKm, todayMyt } from "./models.js";
 import { TGV_LOCATIONS } from "./places.js";
 import { createProviders } from "./providers.js";
+import { loadSnapshot } from "./snapshot.js";
 
 const $ = (id) => document.getElementById(id);
 const providers = createProviders();
@@ -476,6 +477,27 @@ async function load() {
   }
   render();
 
+  // The shared snapshot (one file, refreshed every 6 h) covers most visits with no calls to the
+  // chains at all; fetch live only for a day it doesn't have, or when it's missing or stale.
+  const snap = await snapshotOnce();
+  if (!current()) return;
+  if (snap?.days.includes(selectedDate())) {
+    const region = $("region").value.toLowerCase();
+    const wanted = (chain, r) => chains.includes(chain) && (!region || String(r).toLowerCase().includes(region));
+    state.cinemas = snap.cinemas.filter((c) => wanted(c.chain, c.region));
+    state.shows = snap.showtimes.filter((s) => s.business_date === selectedDate() && wanted(s.chain, s.region));
+    state.errors = (snap.errors[selectedDate()] || []).filter(
+      (e) => /could not load cinemas/.test(e) ? chains.some((c) => e.startsWith(c)) : state.cinemas.some((c) => e.startsWith(`${c.chain} ${c.name}:`)),
+    );
+    rememberCinemaPlaces(state.cinemas);
+    rememberPlaces(state.shows);
+    state.progress = { done: state.cinemas.length, total: state.cinemas.length };
+    state.source = snap.generatedAt;
+    finishLoad();
+    return;
+  }
+  state.source = null;
+
   try {
     await collectShowtimes(selectedDate(), {
       providers,
@@ -510,6 +532,10 @@ async function load() {
     state.errors.push(`Could not load showtimes: ${err.message || err}`);
   }
   if (!current()) return;
+  finishLoad();
+}
+
+function finishLoad() {
   state.loading = false;
   // Every cinema answered (or most did) and none has a show: that day isn't published yet.
   const answered = state.progress.done - state.errors.filter((e) => !e.includes("could not load cinemas")).length;
@@ -517,6 +543,9 @@ async function load() {
   else if (state.shows.length) state.emptyDates.delete(emptyKey(selectedDate()));
   render();
 }
+
+let snapshotPromise = null;
+const snapshotOnce = () => (snapshotPromise ??= loadSnapshot());
 
 let renderQueued = false;
 function scheduleRender() {
@@ -531,6 +560,11 @@ function scheduleRender() {
 // ---------------------------------------------------------------- grid
 
 function progressLabel() {
+  if (state.source && !state.loading) {
+    const d = new Date(Date.parse(state.source) + 8 * 3600 * 1000);
+    const when = `${d.getUTCDate()} ${d.toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" })}, ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`;
+    return `${state.cinemas.length} cinemas · updated ${when} MYT`;
+  }
   const { done, total } = state.progress;
   if (!total) return state.loading ? "Finding cinemas…" : "";
   return state.loading ? `Loaded ${done}/${total} cinemas` : `Loaded ${done}/${total} cinemas · done`;

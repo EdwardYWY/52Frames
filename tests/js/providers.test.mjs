@@ -10,7 +10,7 @@ import {
   parseTgvCinemas,
   parseTgvShowtimes,
 } from "../../site/js/providers.js";
-import { parseXml } from "./xml.mjs";
+import { parseXml } from "../../scripts/xml.mjs";
 
 const fixture = (name) => readFileSync(new URL(`../fixtures/${name}`, import.meta.url), "utf8");
 const json = (name) => JSON.parse(fixture(name));

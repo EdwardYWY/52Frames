@@ -85,15 +85,20 @@ sit behind each chain's booking session.
 
 How it works:
 
-1. The browser loads the cinema lists of both chains and keeps the ones in the chosen region.
-2. It fetches each cinema's showtimes for the day, at most 6 requests at a time, and draws results
-   as they arrive ("Loaded 23/51 cinemas").
-3. If a chain or cinema fails, the page says so and shows the rest.
-4. Responses are cached for 10 minutes per date and cinema: in memory for the tab (so switching
-   back to a date is instant) and in `sessionStorage` (so a reload is quick). A region-day is about
-   2 MB, so when storage fills up the oldest entries are dropped.
+1. **Shared snapshot (normal case).** Every 6 hours a GitHub Action (`scripts/snapshot.mjs`) fetches
+   every GSC and TGV cinema in Malaysia for today + 6 days (~714 calls, ~2 minutes, 4 at a time) and
+   publishes one compact file, `data/showtimes.json` (~450 KB, ~100 KB compressed). The page
+   downloads that one file; switching dates and regions after that needs no requests at all, and
+   **visitors make no calls to GSC or TGV**, so the load on the chains is the same (~2,900 calls
+   a day) however many people use the site. A push to `main` reuses the published snapshot instead
+   of fetching again.
+2. **Live fallback.** If the snapshot is missing, older than 13 hours, or doesn't have the chosen
+   day, the browser fetches that day itself: both cinema lists, then each cinema in the region, at
+   most 6 at a time, drawing results as they arrive ("Loaded 23/51 cinemas"). If a chain or cinema
+   fails, the page says so and shows the rest. Live results are cached for 10 minutes, in memory
+   and in `sessionStorage` (oldest entries dropped when it fills up).
 
-This works because both APIs send CORS headers: GSC allows the `edwardywy.github.io` origin, TGV
+The live fallback works because both APIs send CORS headers: GSC allows the `edwardywy.github.io` origin, TGV
 allows any origin. No other endpoints are used.
 
 ```
@@ -102,13 +107,19 @@ site/
   css/style.css
   js/models.js      normalizeTitle, showtime shape, distance (port of models.py)
   js/places.js      TGV cinema coordinates
+  js/snapshot.js    the shared snapshot: pack / unpack / load
+scripts/
+  snapshot.mjs      builds data/showtimes.json (run by the Pages workflow)
+  xml.mjs           tiny XML reader for Node (the snapshot script and tests)
   js/providers.js   GSC + TGV fetch and parse (port of gsc.py / tgv.py); no DOM access
   js/aggregator.js  concurrency limit, sessionStorage cache, filter, group (port of aggregator.py)
   js/app.js         page code: grid, movie view, stars, location
 ```
 
 `.github/workflows/pages.yml` runs the Python and JavaScript tests on every push and pull request,
-and deploys `site/` to Pages on pushes to `main`. In the repository settings, **Settings → Pages →
+deploys `site/` to Pages on pushes to `main`, and rebuilds the snapshot every 6 hours
+(00:17, 06:17, 12:17, 18:17 UTC = 08:17, 14:17, 20:17, 02:17 in Malaysia). To refresh it by hand:
+Actions → "Deploy site to GitHub Pages" → Run workflow. In the repository settings, **Settings → Pages →
 Source** must be **GitHub Actions**.
 
 ## Local web page
