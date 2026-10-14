@@ -18,6 +18,14 @@ document.addEventListener("pointerdown", (e) => {
   if (openOne && !openOne.root.contains(e.target)) closeOpen();
 });
 window.addEventListener("resize", () => openOne?.place());
+// On phones the list is a bottom sheet with its own history entry, so the Back button closes it
+// instead of leaving the page.
+let inHistory = null; // the dropdown whose entry is on top of the history
+window.addEventListener("popstate", () => {
+  const owner = inHistory;
+  inHistory = null;
+  owner?.close(false);
+});
 window.addEventListener("scroll", (e) => {
   if (openOne && !openOne.list.contains(e.target)) openOne.place();
 }, true);
@@ -116,7 +124,8 @@ export function enhanceSelect(select, { summary } = {}) {
   function place() {
     if (list.hidden) return;
     const sheet = window.matchMedia("(max-width: 560px)").matches;
-    root.classList.toggle("sheet", sheet);
+    // Not "sheet": that's the movie view's class, and it would cover the whole screen.
+    root.classList.toggle("is-sheet", sheet);
     if (sheet) {
       list.style.cssText = "";
       return;
@@ -144,14 +153,23 @@ export function enhanceSelect(select, { summary } = {}) {
     place();
     mark();
     list.focus({ preventScroll: true });
+    if (root.classList.contains("is-sheet")) {
+      history.pushState(history.state, "");
+      inHistory = api;
+    }
   }
 
   function close(refocus = true) {
     if (list.hidden) return;
     list.hidden = true;
-    root.classList.remove("open", "sheet");
+    root.classList.remove("open", "is-sheet");
     button.setAttribute("aria-expanded", "false");
     if (openOne === api) openOne = null;
+    // Closed some other way than Back: drop the history entry it added.
+    if (inHistory === api) {
+      inHistory = null;
+      history.back();
+    }
     if (refocus) button.focus({ preventScroll: true });
   }
 

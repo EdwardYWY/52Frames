@@ -180,11 +180,30 @@ export function enableSeatPreview(root, { selector, showFor, fetchPlan }) {
     if (mode === "mouse" && !(anchor && anchor.contains(e.relatedTarget))) closeSoon();
   });
 
-  // Touch and pen: press and hold without moving.
+  // Touch and pen: press and hold without moving. A link's own long-press menu (open in new tab,
+  // preview, copy) appears long before 3 s, and some phones won't let a page cancel it, so while a
+  // finger is down the showtime isn't a link. It is again by the time a quick tap's click arrives.
+  let pressed = null;
+  const unlink = (target) => {
+    pressed = target;
+    if (!target.hasAttribute("href")) return;
+    target.dataset.href = target.getAttribute("href");
+    target.removeAttribute("href");
+  };
+  const relink = () => {
+    if (pressed?.dataset.href) {
+      pressed.setAttribute("href", pressed.dataset.href);
+      delete pressed.dataset.href;
+    }
+    pressed = null;
+  };
   root.addEventListener("pointerdown", (e) => {
     if (e.pointerType === "mouse") return;
     const target = showtimeAt(e.target);
-    if (target) startHold(target, e);
+    if (!target) return;
+    relink();
+    unlink(target);
+    startHold(target, e);
   });
   root.addEventListener("pointermove", (e) => {
     if (!holding || e.pointerType === "mouse") return;
@@ -192,12 +211,14 @@ export function enableSeatPreview(root, { selector, showFor, fetchPlan }) {
   });
   for (const type of ["pointerup", "pointercancel"]) {
     root.addEventListener(type, (e) => {
-      if (e.pointerType !== "mouse") cancelHold();
+      if (e.pointerType === "mouse") return;
+      cancelHold();
+      relink();
     });
   }
-  // The browser's own long-press menu (copy link, preview) would take over before 3 s.
+  // Belt and braces: no long-press menu while a finger is on a showtime.
   root.addEventListener("contextmenu", (e) => {
-    if (holding || swallowClick) e.preventDefault();
+    if (holding || pressed || swallowClick) e.preventDefault();
   });
   root.addEventListener(
     "click",
