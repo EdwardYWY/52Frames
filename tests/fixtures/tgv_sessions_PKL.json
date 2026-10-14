@@ -1,0 +1,341 @@
+{
+ "success": true,
+ "error": null,
+ "results": {
+  "businessday": {
+   "businessday": "2026-10-14",
+   "cinemas": [
+    {
+     "cinemaid": "PKL",
+     "name": "PAVILION KUALA LUMPUR (NEW)",
+     "experiences": "",
+     "extdata": {
+      "cinema": {
+       "id": "PKL",
+       "keyword": "pavilion-kl",
+       "location": "klangvalley",
+       "address": "Lot C5.02.01 & C6.01.00 Level 5 & Level 6 Pavilion Kuala Lumpur 168, Jalan Bukit Bintang  55100 Kuala Lumpur."
+      }
+     },
+     "movies": [
+      {
+       "movieid": "6ebb1802-f068-41c8-a42c-e4e38ba7e63f",
+       "experiences": [
+        {
+         "experience": "indulge",
+         "sessions": [
+          {
+           "sessionid": "7086",
+           "cinemaid": "PKL",
+           "scheduledfilmid": "HO00025789",
+           "showtimemy": "2026-10-14T13:45:00",
+           "screenname": "INDULGE 2",
+           "businessdate": "2026-10-14",
+           "experience": "indulge",
+           "seattypes": "SINGLE",
+           "status": 1,
+           "movieid": "6ebb1802-f068-41c8-a42c-e4e38ba7e63f",
+           "extdata": {
+            "seattype": [
+             "SINGLE"
+            ],
+            "areacategorycodes": [
+             "0000000022"
+            ],
+            "conceptattributenames": [
+             "INDULGE"
+            ],
+            "sessionattributenames": []
+           },
+           "seatstatus": null
+          }
+         ]
+        },
+        {
+         "experience": "deluxe",
+         "sessions": [
+          {
+           "sessionid": "7047",
+           "cinemaid": "PKL",
+           "scheduledfilmid": "HO00025786",
+           "showtimemy": "2026-10-14T12:50:00",
+           "screenname": "Cinema 1",
+           "businessdate": "2026-10-14",
+           "experience": "deluxe",
+           "seattypes": "SINGLE",
+           "status": 1,
+           "movieid": "6ebb1802-f068-41c8-a42c-e4e38ba7e63f",
+           "extdata": {
+            "seattype": [
+             "SINGLE"
+            ],
+            "areacategorycodes": [
+             "0000000027"
+            ],
+            "conceptattributenames": [
+             "2D"
+            ],
+            "sessionattributenames": [
+             "DELUXE"
+            ]
+           },
+           "seatstatus": null
+          },
+          {
+           "sessionid": "7048",
+           "cinemaid": "PKL",
+           "scheduledfilmid": "HO00025786",
+           "showtimemy": "2026-10-14T15:00:00",
+           "screenname": "Cinema 1",
+           "businessdate": "2026-10-14",
+           "experience": "deluxe",
+           "seattypes": "SINGLE",
+           "status": 1,
+           "movieid": "6ebb1802-f068-41c8-a42c-e4e38ba7e63f",
+           "extdata": {
+            "seattype": [
+             "SINGLE"
+            ],
+            "areacategorycodes": [
+             "0000000027"
+            ],
+            "conceptattributenames": [
+             "2D"
+            ],
+            "sessionattributenames": [
+             "DELUXE"
+            ]
+           },
+           "seatstatus": null
+          },
+          {
+           "sessionid": "7043",
+           "cinemaid": "PKL",
+           "scheduledfilmid": "HO00025786",
+           "showtimemy": "2026-10-14T15:50:00",
+           "screenname": "Cinema 4",
+           "businessdate": "2026-10-14",
+           "experience": "deluxe",
+           "seattypes": "SINGLE",
+           "status": 1,
+           "movieid": "6ebb1802-f068-41c8-a42c-e4e38ba7e63f",
+           "extdata": {
+            "seattype": [
+             "SINGLE"
+            ],
+            "areacategorycodes": [
+             "0000000027"
+            ],
+            "conceptattributenames": [
+             "2D"
+            ],
+            "sessionattributenames": [
+             "DELUXE"
+            ]
+           },
+           "seatstatus": null
+          },
+          {
+           "sessionid": "7055",
+           "cinemaid": "PKL",
+           "scheduledfilmid": "HO00025786",
+           "showtimemy": "2026-10-14T17:10:00",
+           "screenname": "Cinema 1",
+           "businessdate": "2026-10-14",
+           "experience": "deluxe",
+           "seattypes": "SINGLE",
+           "status": 1,
+           "movieid": "6ebb1802-f068-41c8-a42c-e4e38ba7e63f",
+           "extdata": {
+            "seattype": [
+             "SINGLE"
+            ],
+            "areacategorycodes": [
+             "0000000027"
+            ],
+            "conceptattributenames": [
+             "2D"
+            ],
+            "sessionattributenames": [
+             "DELUXE"
+            ]
+           },
+           "seatstatus": null
+          },
+          {
+           "sessionid": "7051",
+           "cinemaid": "PKL",
+           "scheduledfilmid": "HO00025786",
+           "showtimemy": "2026-10-14T22:00:00",
+           "screenname": "Cinema 3",
+           "businessdate": "2026-10-14",
+           "experience": "deluxe",
+           "seattypes": "TWIN|SINGLE",
+           "status": 1,
+           "movieid": "6ebb1802-f068-41c8-a42c-e4e38ba7e63f",
+           "extdata": {
+            "seattype": [
+             "TWIN",
+             "SINGLE"
+            ],
+            "areacategorycodes": [
+             "0000000008",
+             "0000000027"
+            ],
+            "conceptattributenames": [
+             "2D"
+            ],
+            "sessionattributenames": [
+             "DELUXE"
+            ]
+           },
+           "seatstatus": null
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "movieid": "76b09b05-5469-4dc7-a54d-bc3be8ca3cc9",
+       "experiences": [
+        {
+         "experience": "indulge",
+         "sessions": [
+          {
+           "sessionid": "7083",
+           "cinemaid": "PKL",
+           "scheduledfilmid": "HO00025757",
+           "showtimemy": "2026-10-14T17:00:00",
+           "screenname": "INDULGE 1",
+           "businessdate": "2026-10-14",
+           "experience": "indulge",
+           "seattypes": "SINGLE",
+           "status": 1,
+           "movieid": "76b09b05-5469-4dc7-a54d-bc3be8ca3cc9",
+           "extdata": {
+            "seattype": [
+             "SINGLE"
+            ],
+            "areacategorycodes": [
+             "0000000022"
+            ],
+            "conceptattributenames": [
+             "INDULGE"
+            ],
+            "sessionattributenames": []
+           },
+           "seatstatus": null
+          }
+         ]
+        },
+        {
+         "experience": "deluxe",
+         "sessions": [
+          {
+           "sessionid": "7046",
+           "cinemaid": "PKL",
+           "scheduledfilmid": "HO00025754",
+           "showtimemy": "2026-10-14T13:05:00",
+           "screenname": "Cinema 4",
+           "businessdate": "2026-10-14",
+           "experience": "deluxe",
+           "seattypes": "SINGLE",
+           "status": 1,
+           "movieid": "76b09b05-5469-4dc7-a54d-bc3be8ca3cc9",
+           "extdata": {
+            "seattype": [
+             "SINGLE"
+            ],
+            "areacategorycodes": [
+             "0000000027"
+            ],
+            "conceptattributenames": [
+             "2D"
+            ],
+            "sessionattributenames": [
+             "DELUXE"
+            ]
+           },
+           "seatstatus": null
+          },
+          {
+           "sessionid": "7045",
+           "cinemaid": "PKL",
+           "scheduledfilmid": "HO00025754",
+           "showtimemy": "2026-10-14T18:00:00",
+           "screenname": "Cinema 4",
+           "businessdate": "2026-10-14",
+           "experience": "deluxe",
+           "seattypes": "SINGLE",
+           "status": 1,
+           "movieid": "76b09b05-5469-4dc7-a54d-bc3be8ca3cc9",
+           "extdata": {
+            "seattype": [
+             "SINGLE"
+            ],
+            "areacategorycodes": [
+             "0000000027"
+            ],
+            "conceptattributenames": [
+             "2D"
+            ],
+            "sessionattributenames": [
+             "DELUXE"
+            ]
+           },
+           "seatstatus": null
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "movies": [
+   {
+    "assets": [],
+    "recid": "6ebb1802-f068-41c8-a42c-e4e38ba7e63f",
+    "itemkey": "other-mommy",
+    "name": "Other Mommy",
+    "folderkey": null,
+    "shortcontent": null,
+    "fullcontent": null,
+    "status": 1,
+    "pubdateutc": "2025-12-10T21:22:28.244Z",
+    "extdata": {
+     "movieinfo": {
+      "lang": "English",
+      "genre": [
+       "Horror"
+      ],
+      "rating": "16",
+      "runtimemins": 93
+     }
+    }
+   },
+   {
+    "assets": [],
+    "recid": "76b09b05-5469-4dc7-a54d-bc3be8ca3cc9",
+    "itemkey": "digger",
+    "name": "Digger",
+    "folderkey": null,
+    "shortcontent": null,
+    "fullcontent": null,
+    "status": 1,
+    "pubdateutc": "2026-01-01T22:58:48.879Z",
+    "extdata": {
+     "movieinfo": {
+      "lang": "English",
+      "genre": [
+       "Black Comedy"
+      ],
+      "rating": "18",
+      "runtimemins": ""
+     }
+    }
+   }
+  ]
+ }
+}

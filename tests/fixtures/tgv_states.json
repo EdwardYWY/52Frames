@@ -1,0 +1,35 @@
+{
+ "success": true,
+ "results": [
+  {
+   "label": "All States/Areas",
+   "value": "all",
+   "cinemas": [
+    {
+     "cinemaid": "PKL",
+     "name": "PAVILION KUALA LUMPUR (NEW)"
+    }
+   ]
+  },
+  {
+   "label": "Klang Valley",
+   "value": "klangvalley",
+   "cinemas": [
+    {
+     "cinemaid": "PKL",
+     "name": "PAVILION KUALA LUMPUR (NEW)"
+    }
+   ]
+  },
+  {
+   "label": "Johor",
+   "value": "johor",
+   "cinemas": [
+    {
+     "cinemaid": "BI0",
+     "name": "BUKIT INDAH"
+    }
+   ]
+  }
+ ]
+}

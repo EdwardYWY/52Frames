@@ -1,0 +1,73 @@
+{
+ "Response": {
+  "Header": {
+   "Ver": "1.0"
+  },
+  "Body": {
+   "Status": {
+    "RespStatus": "000",
+    "RespDesc": "Successful",
+    "RespDateTime": "2026-10-14 12:49:05"
+   },
+   "TopFive": [],
+   "Locations": [
+    {
+     "Sequence": 1,
+     "CinemaCode": 120,
+     "CinemaName": "GSC Queensbay Mall",
+     "EpaymentName": "Penang - Queensbay Mall",
+     "HallGroup": "",
+     "Sort": 28,
+     "Longitude": "100.30667",
+     "Latitude": "5.33306",
+     "Thumb": "https://poster.gsc.com.my/cinema/120.jpg",
+     "ThumbSmall": "https://poster.gsc.com.my/cinema/120.jpg",
+     "ThumbMedium": "https://poster.gsc.com.my/cinema/120.jpg",
+     "ThumbLarge": "https://poster.gsc.com.my/cinema/120.jpg",
+     "Address": "Lot 3F-50, Queensbay Mall\nNo 100 Persiaran Bayan Indah\nBayan Lepas,Penang,11900",
+     "Region": "Northern",
+     "IsEpayEnabled": true,
+     "IsEpayHidden": false,
+     "ShowDate": [
+      {
+       "OperationDate": "2026-10-14",
+       "DisplayDate": "Wed 14 Oct"
+      },
+      {
+       "OperationDate": "2026-10-15",
+       "DisplayDate": "Thu 15 Oct"
+      }
+     ]
+    },
+    {
+     "Sequence": 25,
+     "CinemaCode": 236,
+     "CinemaName": "Kuala Lumpur - Aurum, The Exchange TRX",
+     "EpaymentName": "Kuala Lumpur - Aurum, The Exchange TRX",
+     "HallGroup": "AURUMTRX",
+     "Sort": 1,
+     "Longitude": "101.71670",
+     "Latitude": "3.14280",
+     "Thumb": "https://poster.gsc.com.my/cinema/236.jpg",
+     "ThumbSmall": "https://poster.gsc.com.my/cinema/236.jpg",
+     "ThumbMedium": "https://poster.gsc.com.my/cinema/236.jpg",
+     "ThumbLarge": "https://poster.gsc.com.my/cinema/236.jpg",
+     "Address": "L2.AT.3 & L3.03.0\nThe Exchange TRX\nPersiaran TRX,\n55188 Kuala Lumpur\nWilayah Persekutuan,Federal Territory of Kuala Lumpur,55188",
+     "Region": "Klang Valley",
+     "IsEpayEnabled": true,
+     "IsEpayHidden": false,
+     "ShowDate": [
+      {
+       "OperationDate": "2026-10-14",
+       "DisplayDate": "Wed 14 Oct"
+      },
+      {
+       "OperationDate": "2026-10-15",
+       "DisplayDate": "Thu 15 Oct"
+      }
+     ]
+    }
+   ]
+  }
+ }
+}
