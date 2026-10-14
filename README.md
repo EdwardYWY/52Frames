@@ -62,16 +62,19 @@ longer than one region (about 10 s for Klang Valley).
 <https://edwardywy.github.io/52Frames/> is a static page in [`site/`](site/): plain ES modules, no
 build step, no dependencies.
 
-- **Now showing**: a poster grid of every movie in the chosen region and day. A 7-day date strip
-  (today + 6), dropdowns for region, cinema (including **★ Starred**) and sort; GSC/TGV toggles.
+- **Now showing**: a poster grid of every movie in the chosen region and day. A search box (title in
+  any language either chain uses; `/` focuses it) that also lists matches showing later this week,
+  greyed with their next day. A 7-day date strip (today + 6), dropdowns for region, cinemas (pick
+  any number, or **★ Starred**) and sort; GSC/TGV toggles.
   Days that load fine but have no shows are marked "Soon": Malaysian cinemas publish the next
   week's showtimes on Wednesdays.
 - **Movie view** (tap a poster; the back button or Esc returns to the grid): a pinned header with
-  the back button, title and date strip, the
-  schedule **by cinema** (collapsed rows with the next times; starred cinemas always first; sort by
-  earliest show, nearest, name or most shows) or **by time** (one list of every show), plus cinema
-  and start-time dropdowns. Each time links to the chain's booking page, where seats are chosen.
-  Sold-out times are struck through, started ones dimmed, after-midnight ones marked `+1`.
+  the back button, title and its own date strip (changing it leaves the main page's date alone).
+  The schedule shows **by time** (the default; the last choice is remembered) or **by cinema**
+  (collapsed rows with the next times; starred cinemas first, with a star pattern; sort by earliest
+  show, nearest, name or most shows), with cinema (several at once, or ★ Starred) and start-time
+  dropdowns. Each time links to the chain's booking page, where seats are chosen. Sold-out times
+  are struck through, started ones dimmed, after-midnight ones marked `+1`.
 - **Subtitles** per chain ("Subtitles (GSC)", "Subtitles (TGV)") with a link to each chain's page
   about the movie; they often differ. TGV lists them in its sessions data. GSC only shows them on
   its public movie pages, so the snapshot job reads those (one page per movie per run; titles are
@@ -118,7 +121,8 @@ scripts/
   xml.mjs           tiny XML reader for Node (the snapshot script and tests)
   js/providers.js   GSC + TGV fetch and parse (port of gsc.py / tgv.py); no DOM access
   js/aggregator.js  concurrency limit, sessionStorage cache, filter, group (port of aggregator.py)
-  js/app.js         page code: grid, movie view, stars, location
+  js/app.js         page code: grid, search, movie view, stars, location
+  js/select.js      styled dropdowns over real <select>s (keyboard, screen readers, bottom sheet on phones)
 ```
 
 `.github/workflows/pages.yml` runs the Python and JavaScript tests on every push and pull request,
