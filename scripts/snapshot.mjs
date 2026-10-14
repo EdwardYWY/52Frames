@@ -3,7 +3,7 @@
 // in one compact file. Run by .github/workflows/pages.yml every 6 hours.
 //
 //   node scripts/snapshot.mjs --out _site/data/showtimes.json
-//   node scripts/snapshot.mjs --out ... --reuse https://edwardywy.github.io/52Frames/data/showtimes.json
+//   node scripts/snapshot.mjs --out ... --reuse https://edwardywy.github.io/52frames/data/showtimes.json
 //
 // --reuse copies the published snapshot instead of fetching (used when a push redeploys the site,
 // so code changes don't add load on the chains); it fetches only if that copy is missing or stale.
@@ -24,7 +24,7 @@ const args = Object.fromEntries(
 const out = args.out || "_site/data/showtimes.json";
 const CONCURRENCY = 4; // gentler than the browser's 6; nobody is waiting on this
 
-const USER_AGENT = "Mozilla/5.0 (compatible; 52frames-showtimes/1.0; +https://edwardywy.github.io/52Frames/)";
+const USER_AGENT = "Mozilla/5.0 (compatible; 52frames-showtimes/1.0; +https://edwardywy.github.io/52frames/)";
 const politeFetch = (url, init = {}) => fetch(url, { ...init, headers: { ...init.headers, "user-agent": USER_AGENT } });
 
 function write(json) {

@@ -53,7 +53,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
             node scripts/snapshot.mjs --out _site/data/showtimes.json \
-              --reuse https://edwardywy.github.io/52Frames/data/showtimes.json
+              --reuse https://edwardywy.github.io/52frames/data/showtimes.json
           else
             node scripts/snapshot.mjs --out _site/data/showtimes.json
           fi

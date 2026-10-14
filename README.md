@@ -3,7 +3,7 @@
 Check **GSC** (Golden Screen Cinemas) and **TGV Cinemas** showtimes across Malaysia in one place,
 on the web, from the command line or in a small local web page.
 
-**Website: <https://edwardywy.github.io/52Frames/>** (no server: your browser calls GSC and TGV
+**Website: <https://edwardywy.github.io/52frames/>** (no server: your browser calls GSC and TGV
 directly).
 
 - Pure Python 3.10+ standard library, so there is nothing to `pip install`.
@@ -59,7 +59,7 @@ longer than one region (about 10 s for Klang Valley).
 
 ## Website (GitHub Pages)
 
-<https://edwardywy.github.io/52Frames/> is a static page in [`site/`](site/): plain ES modules, no
+<https://edwardywy.github.io/52frames/> is a static page in [`site/`](site/): plain ES modules, no
 build step, no dependencies.
 
 - **Movies**: a poster grid across all published booking dates, including advance sales.
@@ -216,7 +216,7 @@ To time the movie view in a real browser (needs Playwright, which is not a proje
 download a snapshot and run:
 
 ```bash
-curl -o /tmp/showtimes.json https://edwardywy.github.io/52Frames/data/showtimes.json
+curl -o /tmp/showtimes.json https://edwardywy.github.io/52frames/data/showtimes.json
 node scripts/bench-movie-view.mjs --snapshot /tmp/showtimes.json --cpu 4   # 4x slower CPU, like a phone
 ```
 
