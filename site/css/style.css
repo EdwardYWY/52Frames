@@ -36,8 +36,8 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
+/* Dark: set on <html> by the script in index.html (the visitor's choice, else the device's). */
+:root[data-theme="dark"] {
     --bg: #0c0d0f;
     --contours: url("../assets/contours-dark.svg");
     --surface: #15161a;
@@ -60,7 +60,6 @@
     --star-bg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cg fill='%23ffd200' fill-opacity='0.13'%3E%3Cpolygon transform='translate(3 4)' points='4,0 5,2.8 8,3 5.6,4.9 6.5,8 4,6.2 1.5,8 2.4,4.9 0,3 3,2.8'/%3E%3Cpolygon transform='translate(17 17) scale(.75)' points='4,0 5,2.8 8,3 5.6,4.9 6.5,8 4,6.2 1.5,8 2.4,4.9 0,3 3,2.8'/%3E%3C/g%3E%3C/svg%3E");
     --star-bg-band: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cg fill='%238a6400' fill-opacity='0.28'%3E%3Cpolygon transform='translate(3 4)' points='4,0 5,2.8 8,3 5.6,4.9 6.5,8 4,6.2 1.5,8 2.4,4.9 0,3 3,2.8'/%3E%3Cpolygon transform='translate(17 17) scale(.75)' points='4,0 5,2.8 8,3 5.6,4.9 6.5,8 4,6.2 1.5,8 2.4,4.9 0,3 3,2.8'/%3E%3C/g%3E%3C/svg%3E");
     color-scheme: dark;
-  }
 }
 
 *,
@@ -94,9 +93,8 @@ body.locked { overflow: hidden; }
 /* ------------------------------------------------------------------ top bar */
 
 .topbar {
-  position: sticky; top: 0; z-index: 10;
+  /* Scrolls away with the page: the list needs the room more than the bar does. */
   background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
 .topbar-in { max-width: 1240px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 14px; }
@@ -490,9 +488,11 @@ a.trow.starred:hover { background-image: var(--star-bg-band); }
   display: flex; align-items: center; gap: 8px; height: 40px; margin: -56px 16px 16px 0; padding: 0 14px;
   font: 700 13px/1 var(--f-display); letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--band-ink); background: var(--band); border: 0; border-radius: 0; cursor: pointer;
-  box-shadow: inset 4px 0 0 var(--accent), 0 8px 24px rgb(0 0 0 / 0.25);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
 }
 .to-top[hidden] { display: none; }
+/* The movie list's own Top button, pinned to the window (the movie view's sits in its panel). */
+.page-top { position: fixed; right: 16px; bottom: 16px; z-index: 15; margin: 0; }
 .to-top span:first-child { font-size: 16px; color: var(--accent); }
 .to-top:hover { background: var(--accent); color: #16171a; box-shadow: 0 8px 24px rgb(0 0 0 / 0.25); }
 .to-top:hover span:first-child { color: inherit; }

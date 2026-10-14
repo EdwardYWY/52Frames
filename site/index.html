@@ -7,8 +7,16 @@
 <meta name="description" content="GSC and TGV showtimes across Malaysia, on one page.">
 <title>52 Frames</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2316171a'/%3E%3Cpath d='M6 6h14l6 6v14H6z' fill='%23ffd200'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/style.css?v=11">
-<script type="module" src="js/app.js?v=11"></script>
+<script>
+  // Light or dark before anything is drawn: the visitor's choice, else the device's (app.js keeps it in step).
+  (function () {
+    let theme = null;
+    try { theme = localStorage.getItem("showtimes:theme"); } catch {}
+    document.documentElement.dataset.theme = theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  })();
+</script>
+<link rel="stylesheet" href="css/style.css?v=12">
+<script type="module" src="js/app.js?v=12"></script>
 </head>
 <body>
 
@@ -20,6 +28,9 @@
     <div class="topbar-tools">
       <button type="button" class="tool" id="locate" aria-pressed="false" title="Show distance from where you are">
         <span class="tool-icon" aria-hidden="true">◎</span><span class="tool-text" id="locate-text">Location</span>
+      </button>
+      <button type="button" class="tool" id="theme" aria-pressed="false" title="Switch between light and dark">
+        <span class="tool-icon" aria-hidden="true" id="theme-icon">☾</span><span class="tool-text" id="theme-text">Dark</span>
       </button>
       <button type="button" class="tool" id="open-stars" title="Manage starred cinemas">
         <span class="tool-icon" aria-hidden="true">★</span><span class="tool-text">Starred</span><span class="tool-badge mono" id="star-count"></span>
@@ -89,6 +100,7 @@
       Unofficial and unaffiliated.</p>
   </footer>
 </main>
+<button type="button" class="to-top page-top" id="page-top" hidden><span aria-hidden="true">↑</span><span>Top</span></button>
 
 <div class="sheet stars-sheet" id="stars" hidden>
   <div class="sheet-backdrop" data-close-stars></div>
