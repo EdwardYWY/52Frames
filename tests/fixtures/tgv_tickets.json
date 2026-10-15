@@ -1,0 +1,8 @@
+{"success":true,"results":{"tickets":[
+  {"description":"SINGLE","areaCategoryCode":"single","priceInCents":2500,"taxInCents":150},
+  {"description":"TWIN","areaCategoryCode":"twin","priceInCents":4000,"taxInCents":240},
+  {"description":"SENIOR/OKU","areaCategoryCode":"single","priceInCents":1200},
+  {"description":"CHILD","areaCategoryCode":"single","priceInCents":1200,"isChildOnlyTicket":true},
+  {"description":"FREE","areaCategoryCode":"single","priceInCents":2500,"isComplimentaryTicket":true},
+  {"description":"INVALID","areaCategoryCode":"single","priceInCents":"oops"}
+]}}

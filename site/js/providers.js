@@ -15,6 +15,7 @@ export const GSC = {
   showtimesUrl:
     "https://epaymentapi.gsc.com.my/showtimews/service.asmx/getShowTimesByLocation_ParentChild_V2",
   bookingBase: "https://epaymentwebapp.gsc.com.my/showtime-by-movies",
+  pricesUrl: "https://epaymentapi.gsc.com.my/showtimews/service.asmx/getTicketPricingEpaySpecialV5",
   seatsUrl: "https://epaymentapi.gsc.com.my/showtimews/service.asmx/getHallSeatStatus",
 };
 
@@ -117,15 +118,17 @@ export function parseGscShowtimes(xmlText, cinema, parseXml = domParseXml) {
 }
 
 /**
- * Where GSC keeps a show's seats: { hid, date, time } from its showtimes XML, or null.
+ * Where GSC keeps a show's seats and prices: { hid, filmid, date, time } from its showtimes XML, or null.
  * Shows don't carry GSC's hall id (the snapshot leaves it out), so they're matched by start and hall.
  */
 export function findGscHall(xmlText, show, parseXml = domParseXml) {
-  for (const node of parseXml(xmlText).getElementsByTagName("show")) {
-    const date = attr(node, "date");
-    const time = attr(node, "time");
-    if (`${date}T${time.slice(0, 2)}:${time.slice(2)}` === show.start && gscHall(node) === show.hall) {
-      return { hid: attr(node, "hid"), date, time };
+  for (const child of parseXml(xmlText).getElementsByTagName("child")) {
+    for (const node of child.getElementsByTagName("show")) {
+      const date = attr(node, "date");
+      const time = attr(node, "time");
+      if (`${date}T${time.slice(0, 2)}:${time.slice(2)}` === show.start && gscHall(node) === show.hall) {
+        return { hid: attr(node, "hid"), filmid: attr(child, "code"), date, time };
+      }
     }
   }
   return null;
@@ -142,6 +145,7 @@ const GSC_PAIR_TYPES = new Set(["T", "TS", "4S"]);
  */
 export function parseGscSeatPlan(xmlText, parseXml = domParseXml) {
   const root = parseXml(xmlText);
+  const categories = new Map([...root.getElementsByTagName("category")].map((node) => [attr(node, "id"), attr(node, "name")]));
   const grid = new Map(); // y -> { label, seats: Map(x -> seat) }
   for (const row of root.getElementsByTagName("row")) {
     const y = Number(attr(row, "y"));
@@ -154,6 +158,8 @@ export function parseGscSeatPlan(xmlText, parseXml = domParseXml) {
         number: `${attr(row, "value")}${attr(col, "value")}`,
         state: status === "A" && !GSC_CLOSED_TYPES.has(type) ? "free" : status === "B" ? "sold" : "blocked",
         pair: GSC_PAIR_TYPES.has(type),
+        category: attr(col, "seatcategory"),
+        categoryName: categories.get(attr(col, "seatcategory")) || "",
         oku: type === "W", // wheelchair space
       });
     }
@@ -213,6 +219,7 @@ export const TGV = {
   chain: "TGV",
   statesUrl: "https://api.tgv.com.my/api/cinemas/v1/getstatecinema",
   sessionsUrl: "https://api.tgv.com.my/api/boxoffice/v1/moviesession_get",
+  pricesUrl: "https://api.tgv.com.my/api/boxoffice/v1/moviesession_gettickets",
   seatPlanUrl: "https://api.tgv.com.my/api/boxoffice/v1/moviesession_getseatplan",
   movieUrl: "https://www.tgv.com.my/movies/details",
   infoUrl: "https://www.tgv.com.my/movie",
@@ -352,14 +359,18 @@ export function parseTgvShowtimes(payload, cinema) {
  * Shows don't carry ids (the snapshot leaves them out), so they're matched by start and hall.
  */
 export function findTgvSession(payload, show) {
-  let fallback = "";
+  return String(findTgvSessionDetails(payload, show)?.sessionid || "");
+}
+
+function findTgvSessionDetails(payload, show) {
+  let fallback = null;
   for (const dayCinema of payload?.results?.businessday?.cinemas || []) {
     for (const movie of dayCinema.movies || []) {
       for (const experience of movie.experiences || []) {
         for (const session of experience.sessions || []) {
           if (tgvStart(session.showtimemy) !== show.start || (session.screenname || "") !== show.hall) continue;
-          if ((session.experience || "").toUpperCase() === show.experience) return String(session.sessionid);
-          fallback ||= String(session.sessionid);
+          if ((session.experience || "").toUpperCase() === show.experience) return session;
+          fallback ||= session;
         }
       }
     }
@@ -396,6 +407,8 @@ export function parseTgvSeatPlan(payload) {
           number: `${row.physicalName || ""}${seat.id ?? ""}`,
           state: SEAT_STATE[seat.status] || "blocked",
           pair: (seat.seatsInGroup?.length || 0) > 1,
+          category: String(area.areaCategoryCode || ""),
+          categoryName: ({ SINGLE: "Normal", TWIN: "Twin" })[area.description] || area.description || "",
           oku: seat.status === 8, // wheelchair space
         });
       }
@@ -415,6 +428,30 @@ export function parseTgvSeatPlan(payload) {
   }
   const all = rows.flatMap((row) => row.seats).filter(Boolean);
   return { rows, free: all.filter((s) => s.state === "free").length, total: all.length };
+}
+
+// Ticket amounts already include tax; tax fields are a breakdown, not an extra charge.
+const enabled = (value) => value === true || value === 1 || value === "1" || value === "true";
+
+export function parseTgvPrices(payload) {
+  if (!payload?.success) return [];
+  return (payload.results?.tickets || []).flatMap((ticket) => {
+    const amount = floatOrNull(ticket.priceInCents);
+    if (enabled(ticket.isChildOnlyTicket) || enabled(ticket.isComplimentaryTicket) || amount === null || amount <= 0) return [];
+    return [{ category: String(ticket.areaCategoryCode || ""), label: ticket.description || ticket.longDescription || "Ticket", amount: amount / 100, seatsTaken: /TWIN/i.test(ticket.description || "") ? 2 : 1 }];
+  });
+}
+
+export function parseGscPrices(xmlText, parseXml = domParseXml) {
+  const root = parseXml(xmlText);
+  const data = [...root.getElementsByTagName("ticketdata")].find((node) => attr(node, "code") === "0");
+  if (!data) return [];
+  return [...data.getElementsByTagName("ticket")].flatMap((ticket) => {
+    const amount = floatOrNull(attr(ticket, "price"));
+    const label = attr(ticket, "type");
+    if (enabled(attr(ticket, "hide_epay")) || /child|complimentary/i.test(label) || amount === null || amount <= 0) return [];
+    return [{ category: attr(ticket, "seatcategory"), label, amount, seatsTaken: intOrNull(attr(ticket, "seats_taken")) || 1 }];
+  });
 }
 
 // ---------------------------------------------------------------------------- network
@@ -441,12 +478,12 @@ async function request(fetchImpl, url, init = {}, signal) {
 }
 
 // The seat map first looks up the show's id in that cinema's day of showtimes. Holding several
-// times at one cinema reuses that list for a while, so each later seat map is a single request.
+// times at one cinema reuses that list for a while, for both seats and ticket prices.
 const SEAT_LOOKUP_TTL_MS = 2 * 60 * 1000;
 
 /**
  * The two chains, each with fetchCinemas(), fetchShowtimes(cinema, isoDate) and
- * fetchSeatPlan(show) for the live seat map.
+ * fetchSeatPlan(show) and fetchSeatPrices(show) for the live seat map.
  */
 export function createProviders({
   fetch: fetchImpl = globalThis.fetch.bind(globalThis),
@@ -478,6 +515,15 @@ export function createProviders({
         const res = await request(fetchImpl, `${GSC.showtimesUrl}?${params}`, {}, signal);
         return parseGscShowtimes(await res.text(), cinema, parseXml);
       },
+      async fetchSeatPrices(show, signal) {
+        const params = new URLSearchParams({ locationid: show.cinema_id, oprndate: show.business_date, hallGroup: show.hall_group || "" });
+        const xml = await lookup(`${GSC.showtimesUrl}?${params}`, {}, (res) => res.text(), signal);
+        const hall = findGscHall(xml, show, parseXml);
+        if (!hall?.filmid) return [];
+        const prices = new URLSearchParams({ locationid: show.cinema_id, hallid: hall.hid, filmid: hall.filmid, showdate: hall.date, showtime: hall.time });
+        const res = await request(fetchImpl, `${GSC.pricesUrl}?${prices}`, {}, signal);
+        return parseGscPrices(await res.text(), parseXml);
+      },
       /** The live seat plan of one show (needs show.hall_group for premium halls). */
       async fetchSeatPlan(show, signal) {
         const params = new URLSearchParams({ locationid: show.cinema_id, oprndate: show.business_date, hallGroup: show.hall_group || "" });
@@ -506,6 +552,21 @@ export function createProviders({
           signal,
         );
         return parseTgvShowtimes(await res.json(), cinema);
+      },
+      async fetchSeatPrices(show, signal) {
+        const post = (body) => ({ method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+        const sessions = await lookup(TGV.sessionsUrl, post({ cinemaid: show.cinema_id, businessdate: show.business_date }), (res) => res.json(), signal);
+        const session = findTgvSessionDetails(sessions, show);
+        const codes = [...new Set(session?.extdata?.areacategorycodes || [])];
+        const prices = await Promise.all(codes.map(async (code) => {
+          try {
+            const res = await request(fetchImpl, TGV.pricesUrl, post({ cinemaid: show.cinema_id, sessionid: String(session.sessionid), areacategorycodes: String(code), req: {} }), signal);
+            return parseTgvPrices(await res.json());
+          } catch {
+            return []; // one unavailable area must not hide the others
+          }
+        }));
+        return prices.flat();
       },
       /** The live seat plan of one show: finds its session, then asks for the plan. */
       async fetchSeatPlan(show, signal) {

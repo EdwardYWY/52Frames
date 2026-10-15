@@ -667,6 +667,8 @@ a.trow:hover .overnight, a.trow.holding .overnight { color: var(--band-accent); 
   background: linear-gradient(var(--tgv), var(--tgv)) center / 1px 100% no-repeat;
 }
 .seat-legend .seat-when { margin-left: auto; }
+.seat-prices:empty { display: none; }
+.seat-price-note { flex-basis: 100%; font-size: 10px; }
 
 /* -------------------------------------------------------------- corner rounding
    Square by default. --r-panel rounds panels and popups, --r-control buttons, dates and fields. */
