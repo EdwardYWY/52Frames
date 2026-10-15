@@ -78,7 +78,7 @@ build step, no dependencies.
   cinema (several at once, or ★ Starred) and start-time dropdowns stay pinned under the header
   while the schedule scrolls (not on phones); a Top button returns to the top. Each time links to the chain's booking page, where seats are chosen. Sold-out times
   are struck through, started ones dimmed, after-midnight ones marked `+1`.
-  Hidden extra: rest the mouse on a showtime for 2.5 seconds (or press and hold it for 2.5 seconds on a
+  Hidden extra: rest the mouse on a showtime for 2 seconds (or press and hold it for 2 seconds on a
   phone) to see that show's live seat map, fetched from GSC or TGV on the spot; a normal click or tap still books.
 - **Subtitles** per chain ("Subtitles (GSC)", "Subtitles (TGV)") with a link to each chain's page
   about the movie; they often differ. TGV lists them in its sessions data. GSC only shows them on
@@ -101,7 +101,7 @@ build step, no dependencies.
 - **Starred cinemas** (top bar → Starred): star or unstar any cinema, clear all. Stars, location
   on/off and the last region are kept in this browser's `localStorage`; nothing is sent anywhere.
 
-Live seat maps (the hidden 2.5-second hold) use the chains' public read-only endpoints, with no login:
+Live seat maps (the hidden 2-second hold) use the chains' public read-only endpoints, with no login:
 TGV's `moviesession_getseatplan` and GSC's `getHallSeatStatus`. Shows don't carry the chains' session
 or hall ids, so the page first looks the show up in that cinema's day of showtimes (kept for 2
 minutes, so further seat maps at that cinema are one request each). Nothing is fetched until a hold
@@ -138,7 +138,7 @@ scripts/
   js/providers.js   GSC + TGV fetch and parse (port of gsc.py / tgv.py); no DOM access
   js/aggregator.js  concurrency limit, sessionStorage cache, filter, group (port of aggregator.py)
   js/app.js         page code: grid, search, movie view, stars, location
-  js/seatmap.js     hold a showtime for 2.5 s to see its live seat map
+  js/seatmap.js     hold a showtime for 2 s to see its live seat map
   js/select.js      styled dropdowns over real <select>s (keyboard, screen readers, bottom sheet on phones)
 ```
 

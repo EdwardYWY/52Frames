@@ -604,7 +604,7 @@ a.trow:hover .trow-what, a.trow:hover .trow-go, a.trow.holding .trow-what, a.tro
 a.trow:hover .overnight, a.trow.holding .overnight { color: var(--band-accent); }
 
 /* -------------------------------------------------------------- live seat map (seatmap.js)
-   Hidden: hold a showtime for 3 s (mouse rests on it, or a finger presses it). */
+   Hidden: hold a showtime for 2 s (mouse rests on it, or a finger presses it). */
 .seat-hold { position: relative; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 /* While held (mouse resting or finger down) the row shows as hovered and a line runs round it at
    an even speed: from the top middle, clockwise, back to the top middle, closing as the seat map
