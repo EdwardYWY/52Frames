@@ -10,7 +10,7 @@ import { enhanceSelect } from "./select.js?v=23";
 import { collectCatalogue } from "./catalog.js?v=23";
 import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=23";
 import { loadSnapshot } from "./snapshot.js?v=23";
-import { enableSeatPreview } from "./seatmap.js?v=24";
+import { enableSeatPreview } from "./seatmap.js?v=25";
 
 const $ = (id) => document.getElementById(id);
 const providers = createProviders();
