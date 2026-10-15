@@ -52,11 +52,28 @@ export function seatGrid(plan) {
   return el("div", { class: "seat-grid", style: `--cols: ${columns}`, role: "img", "aria-label": `${plan.free} of ${plan.total} seats available` }, rows);
 }
 
+/** Match tickets to the seat categories actually in this hall, keeping concessions labelled. */
+export function seatPriceEntries(plan, prices) {
+  const seats = plan.rows.flatMap((row) => row.seats).filter(Boolean);
+  const entries = new Map();
+  for (const ticket of prices) {
+    const seat = seats.find((seat) => seat.category && seat.category === ticket.category);
+    if (!seat) continue;
+    const name = seat.categoryName || (seat.pair ? "Twin" : seat.oku ? "Wheelchair" : "Normal");
+    const label = /^(adult|single|twin)$/i.test(ticket.label) ? name : `${name} (${ticket.label})`;
+    const unit = ticket.seatsTaken === 2 ? " (pair)" : ticket.seatsTaken > 2 ? ` (${ticket.seatsTaken} seats)` : "";
+    const text = `${label} · RM ${ticket.amount.toFixed(2)}${unit}`;
+    entries.set(text, { text, pair: seat.pair, oku: seat.oku });
+  }
+  return [...entries.values()];
+}
+
 /**
  * Watch `root` for holds on elements matching `selector`.
  * showFor(element) gives the show behind a showtime; fetchPlan(show, signal) its seat plan.
+ * fetchPrices(show, signal) runs alongside it; unavailable prices leave the seats alone.
  */
-export function enableSeatPreview(root, { selector, showFor, fetchPlan }) {
+export function enableSeatPreview(root, { selector, showFor, fetchPlan, fetchPrices = async () => [] }) {
   let timer = null;
   let holding = null; // the showtime being held
   let origin = null; // where the finger went down
@@ -179,9 +196,26 @@ export function enableSeatPreview(root, { selector, showFor, fetchPlan }) {
     pop.replaceChildren(head, sub, body);
     pop.hidden = false;
     place();
+    const priceLegend = el("div", { class: "seat-legend seat-prices mono", "aria-live": "polite" });
+    let loadedPlan = null;
+    let prices = [];
+    const showPrices = () => {
+      if (signal.aborted || !loadedPlan) return;
+      const entries = seatPriceEntries(loadedPlan, prices);
+      priceLegend.replaceChildren(
+        ...entries.map((entry) => el("span", {}, el("i", { class: `seat ${entry.pair ? "twin" : "free"}${entry.oku ? " oku" : ""}` }), entry.text)),
+        ...(entries.length && show.chain === "TGV" ? [el("small", { class: "seat-price-note" }, "RM 0.50 processing fee at checkout")] : []),
+      );
+      place();
+    };
+    fetchPrices(show, signal).then((value) => {
+      prices = value;
+      showPrices();
+    }).catch(() => {}); // prices are optional; the live seats stand on their own
     fetchPlan(show, signal).then(
       (plan) => {
         if (signal.aborted) return;
+        loadedPlan = plan;
         sub.textContent = `${show.cinema_name} · ${plan.free} of ${plan.total} seats left`;
         body.replaceChildren(
           el("div", { class: "seat-screen" }, "Screen"),
@@ -197,7 +231,9 @@ export function enableSeatPreview(root, { selector, showFor, fetchPlan }) {
             plan.rows.some((row) => row.seats.some((seat) => seat?.oku)) ? el("span", {}, el("i", { class: "seat free oku" }), "OKU") : null,
             el("span", { class: "seat-when" }, `Live from ${show.chain} · ${clock()}`),
           ),
+          priceLegend,
         );
+        showPrices();
         place();
       },
       (err) => {

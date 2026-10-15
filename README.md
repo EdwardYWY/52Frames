@@ -104,8 +104,11 @@ build step, no dependencies.
 Live seat maps (the hidden 2-second hold) use the chains' public read-only endpoints, with no login:
 TGV's `moviesession_getseatplan` and GSC's `getHallSeatStatus`. Shows don't carry the chains' session
 or hall ids, so the page first looks the show up in that cinema's day of showtimes (kept for 2
-minutes, so further seat maps at that cinema are one request each). Nothing is fetched until a hold
-completes, and an open map isn't refreshed on a timer.
+minutes). Seats and ticket prices then load in parallel, using TGV's `moviesession_gettickets`
+(one request per area category) or GSC's `getTicketPricingEpaySpecialV5` with the child film code.
+The legend shows tax-inclusive prices for the hall's seat categories, with concessions labelled
+and pair tickets marked. TGV adds RM 0.50 at checkout. If prices are unavailable, the seats still
+appear normally. Nothing is fetched until a hold completes, and an open map isn't refreshed on a timer.
 
 How it works:
 

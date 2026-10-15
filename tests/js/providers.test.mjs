@@ -247,7 +247,7 @@ test("GSC seat map: finds the hall, then reads its seats", async () => {
   const xml = fixture("gsc_showtimes_120.xml");
   // An after-midnight show: GSC files it under the calendar date it starts on.
   const late = gscShows().find((s) => s.start === "2026-10-16T00:15");
-  assert.deepEqual(findGscHall(xml, late, parseXml), { hid: "5", date: "2026-10-16", time: "0015" });
+  assert.deepEqual(findGscHall(xml, late, parseXml), { hid: "5", filmid: "1000005590", date: "2026-10-16", time: "0015" });
   assert.equal(findGscHall(xml, { ...late, hall: "Hall 9" }, parseXml), null);
 
   const plan = parseGscSeatPlan(fixture("gsc_seats_120_hall5.xml"), parseXml);

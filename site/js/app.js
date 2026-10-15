@@ -5,12 +5,12 @@
 import { collectShowtimes, createCache, filterShowtimes, summarizeMovies, uniqueShows } from "./aggregator.js?v=23";
 import { REGIONS, movieGroupKey, distanceKm, normalizeLanguage, normalizeTitle, todayMyt } from "./models.js?v=23";
 import { TGV_LOCATIONS, TGV_NAMES } from "./places.js?v=23";
-import { createProviders, domParseXml } from "./providers.js?v=23";
+import { createProviders, domParseXml } from "./providers.js?v=24";
 import { enhanceSelect } from "./select.js?v=23";
 import { collectCatalogue } from "./catalog.js?v=23";
 import { browseMovies, isConcert, screeningLabel, overnightLabel } from "./browse.js?v=23";
 import { loadSnapshot } from "./snapshot.js?v=23";
-import { enableSeatPreview } from "./seatmap.js?v=23";
+import { enableSeatPreview } from "./seatmap.js?v=24";
 
 const $ = (id) => document.getElementById(id);
 const providers = createProviders();
@@ -834,10 +834,10 @@ function allowSeatPreview(node, show) {
   node.classList.add("seat-hold");
 }
 
-/** A show's live seat plan. GSC's premium halls need the cinema's hall group, which shows don't carry. */
-function fetchSeatPlan(show, signal) {
+/** A show's live seats or prices. GSC's premium halls need the cinema's hall group. */
+function fetchSeatData(show, signal, method) {
   const cinema = [...state.sheet.cinemas, ...state.main.cinemas].find((c) => c.chain === show.chain && c.name === show.cinema_name);
-  return providers[show.chain].fetchSeatPlan({ ...show, hall_group: cinema?.hall_group || "" }, signal);
+  return providers[show.chain][method]({ ...show, hall_group: cinema?.hall_group || "" }, signal);
 }
 let seatPreview = null;
 
@@ -1179,7 +1179,8 @@ async function init() {
   seatPreview = enableSeatPreview($("m-schedule"), {
     selector: ".seat-hold",
     showFor: (node) => seatShows.get(node),
-    fetchPlan: fetchSeatPlan,
+    fetchPlan: (show, signal) => fetchSeatData(show, signal, "fetchSeatPlan"),
+    fetchPrices: (show, signal) => fetchSeatData(show, signal, "fetchSeatPrices"),
   });
   $("sheet").addEventListener("click", (e) => {
     if (e.target.closest("[data-close]")) closeSheet();

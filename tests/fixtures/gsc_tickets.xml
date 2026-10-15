@@ -1,0 +1,10 @@
+<price><ticketdata code="0">
+  <ticket id="1" type="Adult" price="26.50" tax="1.50" surcharge="0" seatcategory="1" seats_taken="1" hide_epay="0"/>
+  <ticket id="2" type="Senior" price="12.00" seatcategory="1" seats_taken="1"/>
+  <ticket id="3" type="OKU" price="12.00" seatcategory="1" seats_taken="1"/>
+  <ticket id="4" type="Adult" price="40.00" seatcategory="2" seats_taken="2"/>
+  <ticket id="5" type="Hidden" price="20.00" seatcategory="1" hide_epay="1"/>
+  <ticket id="6" type="Child" price="12.00" seatcategory="1"/>
+  <ticket id="7" type="Complimentary" price="0" seatcategory="1"/>
+  <ticket id="8" type="Invalid" price="" seatcategory="1"/>
+</ticketdata></price>
