@@ -211,3 +211,84 @@ test("TGV: subtitles and the movie page link", () => {
   assert.equal(mommy.info_url, "https://www.tgv.com.my/movie/other-mommy");
   assert.deepEqual(tgvShows().find((s) => s.movie_title === "Digger").subtitles, [], "empty list = none listed");
 });
+
+test("TGV seat map: finds the show's session, then reads its seat plan", async () => {
+  const { findTgvSession, parseTgvSeatPlan } = await import("../../site/js/providers.js");
+  const shows = tgvShows();
+  const indulge = shows.find((s) => s.start === "2026-10-14T13:45" && s.hall === "INDULGE 2");
+  assert.equal(findTgvSession(json("tgv_sessions_PKL.json"), indulge), "7086");
+  assert.equal(findTgvSession(json("tgv_sessions_PKL.json"), { ...indulge, start: "2026-10-14T13:46" }), "");
+
+  // A real Indulge hall: twin seats around singles, one seat out of use.
+  const plan = parseTgvSeatPlan(json("tgv_seatplan_BU0_indulge.json"));
+  assert.equal(plan.total, 32);
+  assert.equal(plan.free, 31);
+  assert.deepEqual(plan.rows.map((r) => r.label), ["A", "B", "C", "D"], "screen side first, like TGV draws it");
+  const draw = plan.rows.map((r) => r.seats.map((s) => (!s ? " " : s.state === "free" ? (s.pair ? "o" : ".") : "#")).join(""));
+  assert.deepEqual(draw, ["oo .... oo", "oo .... oo", "oo ..#. oo", "oo oooo oo"]);
+  assert.equal(plan.rows[2].seats[5].number, "C5", "seat 1 on the left, as TGV numbers them");
+  assert.equal(plan.rows[0].seats[0].number, "A1");
+  assert.throws(() => parseTgvSeatPlan({ success: false }), /No seat plan/);
+
+  const calls = [];
+  const fakeFetch = async (url, init) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    const body = String(url).endsWith("getseatplan") ? json("tgv_seatplan_BU0_indulge.json") : json("tgv_sessions_PKL.json");
+    return { ok: true, status: 200, json: async () => body };
+  };
+  const live = await createProviders({ fetch: fakeFetch, parseXml }).TGV.fetchSeatPlan(indulge);
+  assert.equal(live.free, 31);
+  assert.deepEqual(calls.map((c) => c.body), [{ cinemaid: "PKL", businessdate: "2026-10-14" }, { cinemaid: "PKL", sessionid: "7086" }]);
+  assert.equal(calls[1].url, "https://api.tgv.com.my/api/boxoffice/v1/moviesession_getseatplan");
+});
+
+test("GSC seat map: finds the hall, then reads its seats", async () => {
+  const { findGscHall, parseGscSeatPlan } = await import("../../site/js/providers.js");
+  const xml = fixture("gsc_showtimes_120.xml");
+  // An after-midnight show: GSC files it under the calendar date it starts on.
+  const late = gscShows().find((s) => s.start === "2026-10-16T00:15");
+  assert.deepEqual(findGscHall(xml, late, parseXml), { hid: "5", date: "2026-10-16", time: "0015" });
+  assert.equal(findGscHall(xml, { ...late, hall: "Hall 9" }, parseXml), null);
+
+  const plan = parseGscSeatPlan(fixture("gsc_seats_120_hall5.xml"), parseXml);
+  assert.equal(plan.total, 112);
+  assert.equal(plan.free, 108, "two sold, two house seats");
+  // As GSC draws it: the row nearest the screen (smallest y) first, here H; A at the back.
+  assert.deepEqual(plan.rows.map((r) => r.label), ["H", "G", "F", "E", "D", "C", "B", "A"]);
+  const row = (label) => plan.rows.find((r) => r.label === label);
+  assert.equal(row("A").seats[0].number, "A01");
+  assert.equal(row("A").seats[2], null, "aisle");
+  assert.equal(row("B").seats[5].number, "B05");
+  assert.equal(row("B").seats[5].state, "sold");
+  assert.equal(row("D").seats[14].state, "blocked", "house seat");
+  assert.equal(row("A").seats[14].oku, true, "wheelchair space");
+  assert.equal(row("A").seats[14].state, "free");
+
+  const calls = [];
+  const fakeFetch = async (url) => {
+    calls.push(String(url));
+    const body = String(url).includes("getHallSeatStatus") ? fixture("gsc_seats_120_hall5.xml") : xml;
+    return { ok: true, status: 200, text: async () => body };
+  };
+  const live = await createProviders({ fetch: fakeFetch, parseXml }).GSC.fetchSeatPlan({ ...late, hall_group: "" });
+  assert.equal(live.free, 108);
+  assert.equal(calls[1], "https://epaymentapi.gsc.com.my/showtimews/service.asmx/getHallSeatStatus?locationid=120&hallid=5&showdate=2026-10-16&showtime=0015");
+});
+
+test("seat maps at one cinema look its showtimes up once, for two minutes", async () => {
+  let t = 0;
+  const calls = [];
+  const fakeFetch = async (url) => {
+    calls.push(String(url).split("/").pop());
+    const body = String(url).endsWith("getseatplan") ? json("tgv_seatplan_BU0_indulge.json") : json("tgv_sessions_PKL.json");
+    return { ok: true, status: 200, json: async () => body };
+  };
+  const tgv = createProviders({ fetch: fakeFetch, parseXml, now: () => t }).TGV;
+  const [a, b] = tgvShows();
+  await tgv.fetchSeatPlan(a);
+  await tgv.fetchSeatPlan(b);
+  assert.deepEqual(calls, ["moviesession_get", "moviesession_getseatplan", "moviesession_getseatplan"]);
+  t = 2 * 60 * 1000;
+  await tgv.fetchSeatPlan(a);
+  assert.equal(calls.filter((c) => c === "moviesession_get").length, 2, "looked up again once stale");
+});

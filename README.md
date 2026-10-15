@@ -3,7 +3,7 @@
 Check **GSC** (Golden Screen Cinemas) and **TGV Cinemas** showtimes across Malaysia in one place,
 on the web, from the command line or in a small local web page.
 
-**Website: <https://edwardywy.github.io/52Frames/>** (no server: your browser calls GSC and TGV
+**Website: <https://edwardywy.github.io/52frames/>** (no server: your browser calls GSC and TGV
 directly).
 
 - Pure Python 3.10+ standard library, so there is nothing to `pip install`.
@@ -59,7 +59,7 @@ longer than one region (about 10 s for Klang Valley).
 
 ## Website (GitHub Pages)
 
-<https://edwardywy.github.io/52Frames/> is a static page in [`site/`](site/): plain ES modules, no
+<https://edwardywy.github.io/52frames/> is a static page in [`site/`](site/): plain ES modules, no
 build step, no dependencies.
 
 - **Movies**: a poster grid across all published booking dates, including advance sales.
@@ -78,13 +78,15 @@ build step, no dependencies.
   cinema (several at once, or ★ Starred) and start-time dropdowns stay pinned under the header
   while the schedule scrolls (not on phones); a Top button returns to the top. Each time links to the chain's booking page, where seats are chosen. Sold-out times
   are struck through, started ones dimmed, after-midnight ones marked `+1`.
+  Hidden extra: rest the mouse on a showtime for 2.5 seconds (or press and hold it for 2.5 seconds on a
+  phone) to see that show's live seat map, fetched from GSC or TGV on the spot; a normal click or tap still books.
 - **Subtitles** per chain ("Subtitles (GSC)", "Subtitles (TGV)") with a link to each chain's page
   about the movie; they often differ. TGV lists them in its sessions data. GSC only shows them on
   its public movie pages, so the snapshot job reads those (one page per movie per run; titles are
   matched to GSC's page links by their letters and digits). Pages that don't say show
   "Not listed"; the live fallback has TGV's only.
 - **Background** uses a static, seamless contour pattern with wide spacing and 40% line opacity.
-  Light and dark themes load their own small SVG; phones crop rather than shrink the pattern.
+  The site is dark only; phones crop rather than shrink the pattern.
   No contour generation or animation runs in the browser.
 - **Posters** come from both chains; when both have one, the higher-resolution one is used where
   it matters (GSC's 500 px poster in the movie view) and the browser picks a lighter one for the grid.
@@ -99,8 +101,11 @@ build step, no dependencies.
 - **Starred cinemas** (top bar → Starred): star or unstar any cinema, clear all. Stars, location
   on/off and the last region are kept in this browser's `localStorage`; nothing is sent anywhere.
 
-Live seat maps aren't shown: the endpoints used only say whether a show is sold out, and seat maps
-sit behind each chain's booking session.
+Live seat maps (the hidden 2.5-second hold) use the chains' public read-only endpoints, with no login:
+TGV's `moviesession_getseatplan` and GSC's `getHallSeatStatus`. Shows don't carry the chains' session
+or hall ids, so the page first looks the show up in that cinema's day of showtimes (kept for 2
+minutes, so further seat maps at that cinema are one request each). Nothing is fetched until a hold
+completes, and an open map isn't refreshed on a timer.
 
 How it works:
 
@@ -129,9 +134,11 @@ site/
 scripts/
   snapshot.mjs      builds data/showtimes.json (run by the Pages workflow)
   xml.mjs           tiny XML reader for Node (the snapshot script and tests)
+  bench-movie-view.mjs  times opening a movie, switching dates and closing it in Chromium
   js/providers.js   GSC + TGV fetch and parse (port of gsc.py / tgv.py); no DOM access
   js/aggregator.js  concurrency limit, sessionStorage cache, filter, group (port of aggregator.py)
   js/app.js         page code: grid, search, movie view, stars, location
+  js/seatmap.js     hold a showtime for 2.5 s to see its live seat map
   js/select.js      styled dropdowns over real <select>s (keyboard, screen readers, bottom sheet on phones)
 ```
 
@@ -204,3 +211,15 @@ The JavaScript tests check the same counts, fields, after-midnight handling and 
 normalisation as the Python tests, and `parity.test.mjs` runs the Python parsers on the same fixtures
 and compares the output field by field. Node has no `DOMParser`, so the tests pass a small XML reader
 (`tests/js/xml.mjs`) to the GSC parser.
+
+To time the movie view in a real browser (needs Playwright, which is not a project dependency),
+download a snapshot and run:
+
+```bash
+curl -o /tmp/showtimes.json https://edwardywy.github.io/52frames/data/showtimes.json
+node scripts/bench-movie-view.mjs --snapshot /tmp/showtimes.json --cpu 4   # 4x slower CPU, like a phone
+```
+
+It prints the time until the next frame for each action, split into script, style and layout, and the
+functions that took longest (`--profile 0` skips the profiler for cleaner totals; `--group cinema`
+times the by-cinema layout).

@@ -2,7 +2,7 @@
 // Ports cinema_showtimes/aggregator.py, plus a sessionStorage cache for the browser.
 
 export const CONCURRENCY = 6;
-import { movieGroupKey, normalizeLanguage } from './models.js?v=8';
+import { movieGroupKey, normalizeLanguage } from './models.js?v=22';
 export const CACHE_TTL_MS = 10 * 60 * 1000;
 // Bump when the cached shape of a showtime changes.
 const CACHE_PREFIX = "showtimes:v3:";
@@ -45,14 +45,15 @@ export function filterShowtimes(showtimes, { chains, region, cinema, movie, afte
 
 /** Map of movie_key -> shows, keys in sorted order, shows by start time. */
 export function groupByMovie(showtimes) {
-  const groups = new Map();
-  const sorted = [...showtimes].sort((a, b) => cmp(movieGroupKey(a), movieGroupKey(b)) || cmp(a.start, b.start));
-  for (const show of sorted) {
+  // Bucket first, then sort each (small) bucket: far cheaper than sorting every show by key.
+  const buckets = new Map();
+  for (const show of showtimes) {
     const key = movieGroupKey(show);
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(show);
+    const list = buckets.get(key);
+    if (list) list.push(show);
+    else buckets.set(key, [show]);
   }
-  return groups;
+  return new Map([...buckets.keys()].sort(cmp).map((key) => [key, buckets.get(key).sort((a, b) => cmp(a.start, b.start))]));
 }
 
 // Known poster widths: GSC thumb_big is 500x750, thumb_medium 232x350; TGV "poster" is 436x650.
