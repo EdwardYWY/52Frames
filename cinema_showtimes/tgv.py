@@ -170,11 +170,15 @@ def parse_showtimes(payload: dict, cinema: Cinema) -> list[Showtime]:
     for day_cinema in (results.get("businessday") or {}).get("cinemas") or []:
         latitude, longitude = _map_point(day_cinema)
         for movie in day_cinema.get("movies") or []:
-            info = movies.get(movie.get("movieid"), {})
+            # TGV sometimes lists sessions for a film it sends no details for (no name, poster
+            # or booking page); there is nothing to show or book, so skip them.
+            info = movies.get(movie.get("movieid")) or {}
+            if not info.get("name"):
+                continue
             movieinfo = (info.get("extdata") or {}).get("movieinfo") or {}
             raw_tags = (info.get("extdata") or {}).get("tags") or ()
             tags = tuple(raw_tags) if isinstance(raw_tags, (list, tuple)) else (raw_tags,)
-            title = info.get("name") or "Unknown movie"
+            title = info["name"]
             booking_url = f"{MOVIE_URL}/{info['itemkey']}" if info.get("itemkey") else ""
             poster_url = _poster_url(info)
             info_url = f"{INFO_URL}/{info['itemkey']}" if info.get("itemkey") else ""

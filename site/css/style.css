@@ -676,7 +676,8 @@ a.trow:hover .overnight, a.trow.holding .overnight { color: var(--band-accent); 
 .toggle span, .day span, .time, .overnight { border-radius: var(--r-control); }
 .seg label:first-child span { border-radius: var(--r-control) 0 0 var(--r-control); }
 .seg label:last-child span { border-radius: 0 var(--r-control) var(--r-control) 0; }
-/* Bottom sheets on phones: only the top corners. */
-.cselect.is-sheet .cselect-list, .seatmap.as-sheet { border-radius: var(--r-panel) var(--r-panel) 0 0; }
+/* Bottom sheets on phones: only the top corners. The filter dropdowns' sheet stays square. */
+.seatmap.as-sheet { border-radius: var(--r-panel) var(--r-panel) 0 0; }
+.cselect.is-sheet .cselect-list { border-radius: 0; }
 /* The movie view fills a phone's screen: nothing to round. */
 @media (max-width: 560px) { .sheet-panel { border-radius: 0; } }

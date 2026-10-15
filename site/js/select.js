@@ -247,6 +247,13 @@ export function enhanceSelect(select, { summary } = {}) {
     }
   });
   select.addEventListener("change", sync);
+  // A tap on the label's text would otherwise focus the hidden native <select>, and phones then
+  // open their own (rounded) picker instead of ours. Send it to our button instead.
+  select.closest("label")?.addEventListener("click", (e) => {
+    if (root.contains(e.target) && e.target !== select) return;
+    e.preventDefault();
+    if (!select.disabled) button.click();
+  });
 
   const api = { root, list, sync, open, close, place };
   sync();

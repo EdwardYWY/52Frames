@@ -148,6 +148,14 @@ class TgvShowtimeParsingTest(unittest.TestCase):
         failed = {"success": False, "error": {"code": "x", "message": "nope"}}
         self.assertEqual(tgv.parse_showtimes(failed, self.cinema), [])
 
+    def test_sessions_for_a_movie_without_details_are_skipped(self):
+        payload = _json("tgv_sessions_PKL.json")
+        payload["results"]["movies"] = [m for m in payload["results"]["movies"] if m["name"] != "Digger"]
+        titles = {s.movie_title for s in tgv.parse_showtimes(payload, self.cinema)}
+        self.assertNotIn("Unknown movie", titles)
+        self.assertNotIn("Digger", titles)
+        self.assertIn("Other Mommy", titles)
+
 
 if __name__ == "__main__":
     unittest.main()
