@@ -116,7 +116,7 @@ export function enhanceSelect(select, { summary } = {}) {
   function place() {
     if (list.hidden) return;
     const sheet = window.matchMedia("(max-width: 560px)").matches;
-    root.classList.toggle("sheet", sheet);
+    root.classList.toggle("bottom-sheet", sheet);
     if (sheet) {
       list.style.cssText = "";
       return;
@@ -149,7 +149,7 @@ export function enhanceSelect(select, { summary } = {}) {
   function close(refocus = true) {
     if (list.hidden) return;
     list.hidden = true;
-    root.classList.remove("open", "sheet");
+    root.classList.remove("open", "bottom-sheet");
     button.setAttribute("aria-expanded", "false");
     if (openOne === api) openOne = null;
     if (refocus) button.focus({ preventScroll: true });
@@ -229,6 +229,13 @@ export function enhanceSelect(select, { summary } = {}) {
     }
   });
   select.addEventListener("change", sync);
+  // A tap on the label's text would otherwise focus the hidden native <select>, and phones then
+  // open their own (rounded) picker instead of ours. Send it to our button instead.
+  select.closest("label")?.addEventListener("click", (e) => {
+    if (root.contains(e.target) && e.target !== select) return;
+    e.preventDefault();
+    if (!select.disabled) button.click();
+  });
 
   const api = { root, list, sync, open, close, place };
   sync();

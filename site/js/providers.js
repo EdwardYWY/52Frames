@@ -242,9 +242,12 @@ export function parseTgvShowtimes(payload, cinema) {
   for (const dayCinema of results.businessday?.cinemas || []) {
     const [latitude, longitude] = tgvMapPoint(dayCinema);
     for (const movie of dayCinema.movies || []) {
-      const info = movies.get(movie.movieid) || {};
+      // TGV sometimes lists sessions for a film it sends no details for (no name, poster or
+      // booking page); there is nothing to show or book, so skip them.
+      const info = movies.get(movie.movieid);
+      if (!info?.name) continue;
       const movieinfo = info.extdata?.movieinfo || {};
-      const title = info.name || "Unknown movie";
+      const title = info.name;
       const bookingUrl = info.itemkey ? `${TGV.movieUrl}/${info.itemkey}` : "";
       const posterUrl = tgvPosterUrl(info);
       const infoUrl = info.itemkey ? `${TGV.infoUrl}/${info.itemkey}` : "";

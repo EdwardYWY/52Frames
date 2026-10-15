@@ -146,6 +146,15 @@ test("TGV: failed response returns no shows", () => {
   assert.deepEqual(parseTgvShowtimes(failed, tgvCinema()), []);
 });
 
+test("TGV sessions for a movie without details are skipped", () => {
+  const payload = json("tgv_sessions_PKL.json");
+  payload.results.movies = payload.results.movies.filter((m) => m.name !== "Digger");
+  const titles = new Set(parseTgvShowtimes(payload, tgvCinema()).map((s) => s.movie_title));
+  assert.ok(!titles.has("Unknown movie"));
+  assert.ok(!titles.has("Digger"));
+  assert.ok(titles.has("Other Mommy"));
+});
+
 test("fetchers call the same endpoints as the Python code", async () => {
   const calls = [];
   const fakeFetch = async (url, init = {}) => {
