@@ -1,8 +1,8 @@
-// A hidden extra: keep the mouse on a showtime for 2 seconds, or press and hold it on a touch
+// A hidden extra: keep the mouse on a showtime for 1.5 seconds, or press and hold it on a touch
 // screen, to see that show's live seat map, straight from the chain (GSC or TGV). Nothing is
 // fetched until the hold is complete. A plain tap or click still opens the booking page.
 
-export const HOLD_MS = 2000;
+export const HOLD_MS = 1500;
 const TRACE_DELAY_MS = 300; // the outline starts after this, so passing over a time doesn't flash it
 const MOVE_PX = 10; // a finger that moves this far is scrolling, not holding
 const CLOSE_DELAY_MS = 250; // mouse: time to travel from the showtime into the seat map
